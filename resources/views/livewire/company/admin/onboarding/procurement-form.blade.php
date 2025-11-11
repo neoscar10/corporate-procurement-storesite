@@ -43,7 +43,7 @@
         </div>
     
         <div class="d-flex justify-content-center">
-            <button class="btn w-25 btn-primary text-light waves-effect waves-light" wire:click="save"
+            <button class="btn w-100 btn-primary text-light waves-effect waves-light" wire:click="save"
                 wire:loading.attr="disabled">
                 <span wire:loading.remove>Save & proceed</span>
                 <span wire:loading><x-spinner size="sm" text="Saving..." /></span>

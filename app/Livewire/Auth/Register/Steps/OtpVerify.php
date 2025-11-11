@@ -3,6 +3,7 @@
 namespace App\Livewire\Auth\Register\Steps;
 
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Company\Company;
 use App\Services\Onboarding\CompanyOnboardingService;
 
@@ -19,15 +20,21 @@ class OtpVerify extends Component
 
     public function verify(CompanyOnboardingService $svc)
     {
-        $this->validate();
+         $this->validate();
+
         $company = Company::with('representative')->findOrFail($this->companyId);
-        $svc->verifyOtpAndCreateFirstUser($company, $this->otpId, $this->code);
+
+        // Create first user (and email credentials) but DO NOT log them in
+        $svc->verifyOtpAndCreateFirstUser($company, $this->otpId ?? '', $this->code);
+
+        // Tell the wizard to move to the success screen
         $this->dispatch('reg.otp.verified');
-        session()->flash('success', 'Account created successfully.');
+
+        // Land on the success card (step 4 in the 3-step + success flow)
         return redirect()->route('register', [
-        'step'    => 7,
-        'company' => $company->id,
-        ])->with('success', 'Account created');
+            'step'    => 4,              // <-- important: success card
+            'company' => $company->id,
+        ])->with('success', 'Account created. Your login details have been emailed.');
     }
 
     public function render()

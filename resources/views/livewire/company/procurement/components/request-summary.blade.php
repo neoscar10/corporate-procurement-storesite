@@ -1,5 +1,5 @@
 <div class="row g-3">
-    <div class="col-md-6">
+    <div class="col-md-12">
         <div class="card h-100">
             <div class="card-body py-3">
                 <h6 class="fw-semibold mb-2">Request Details</h6>
@@ -28,7 +28,7 @@
         </div>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-12">
         <div class="card h-100">
             <div class="card-body py-3">
                 <h6 class="fw-semibold mb-2">Budget</h6>

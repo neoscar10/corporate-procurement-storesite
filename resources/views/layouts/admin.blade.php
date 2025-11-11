@@ -26,6 +26,7 @@
     @stack('styles')
     @livewireStyles
 
+
     {{-- Page transition loader styles --}}
     <style>
         :root {
@@ -140,6 +141,11 @@
     data-preloader="disable" data-theme="default" data-theme-colors="default">
     <div id="layout-wrapper">
         @include('partials.topbar')
+
+        
+       <div>
+        
+       </div>
         @include('partials.sidebar')
 
         {{-- Required by Velzon for vertical layout overlay/closing sidebar --}}
@@ -157,6 +163,13 @@
         <div class="main-content">
             <div class="page-content">
                 <div class="container-fluid">
+
+                    {{-- To display steps needed to be completed for onboarding if needed --}}
+                    @auth
+                        <livewire:onboarding.nag-bar :company-id="optional(auth()->user())->company_id" />
+                            
+                    @endauth
+
                     @hasSection('content') @yield('content') @else {{ $slot ?? '' }} @endif
                 </div>
             </div>

@@ -72,31 +72,42 @@ if ($me) {
 
 
             @else
-                {{-- Normal wizard --}}
-                <div>
-                    <x-ui.stepper :steps="$steps" :current="$step" />
-                </div>
+                    {{-- Normal wizard --}}
+                    <div>
+                        <x-ui.stepper :steps="$steps" :current="$step" />
+                    </div>
 
                 <div class="mt-3">
                     @if((int) $step === 1)
-                        <livewire:company.admin.onboarding.procurement-form :company-id="$companyId" :key="'ob-step-1'" />
+                        {{-- NEW: Step 1 -> Addresses --}}
+                        <livewire:company.admin.onboarding.addresses-form :company-id="$companyId" :key="'ob-step-1'" />
+
                     @elseif((int) $step === 2)
-                        <livewire:company.admin.onboarding.kyc-form :company-id="$companyId" :key="'ob-step-2'" />
+                        {{-- NEW: Step 2 -> Contact --}}
+                        <livewire:company.admin.onboarding.contact-form :company-id="$companyId" :key="'ob-step-2'" />
+
                     @elseif((int) $step === 3)
-                        <livewire:company.admin.onboarding.billing-form :company-id="$companyId" :key="'ob-step-3'" />
+                        <livewire:company.admin.onboarding.procurement-form :company-id="$companyId" :key="'ob-step-3'" />
+
                     @elseif((int) $step === 4)
-                        <livewire:company.admin.onboarding.success-card :company-id="$companyId" :key="'ob-step-4'" />
-                        {{-- Only company admin should resubmt docs for kyc --}}
+                        <livewire:company.admin.onboarding.kyc-form :company-id="$companyId" :key="'ob-step-4'" />
+
+                    @elseif((int) $step === 5)
+                        <livewire:company.admin.onboarding.billing-form :company-id="$companyId" :key="'ob-step-5'" />
+
+                    @elseif((int) $step === 6)
+                        <livewire:company.admin.onboarding.success-card :company-id="$companyId" :key="'ob-step-6'" />
                         @if ($canResubmit)
                             <div class="text-center mt-2">
-                                <a href="{{ route('company.onboarding', ['resubmit' => 1]) }}" class="text-muted small text-decoration-underline">
+                                <a href="{{ route('company.onboarding', ['resubmit' => 1]) }}"
+                                    class="text-muted small text-decoration-underline">
                                     Resubmit documents
                                 </a>
                             </div>
                         @endif
-
                     @endif
                 </div>
+
             @endif
                 {{-- Invite user modal --}}
             <livewire:auth.invite.invite-user-modal :company-id="$companyId" :key="'invite-modal-root'" />

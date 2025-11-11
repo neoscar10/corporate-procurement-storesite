@@ -27,7 +27,7 @@
     </div>
 
     <div class="d-flex justify-content-center mt-3">
-        <button class="btn btn-primary w-25 text-light waves-effect waves-light" wire:click="save"
+        <button class="btn btn-primary w-100 text-light waves-effect waves-light" wire:click="save"
             wire:loading.attr="disabled">
             <span wire:loading.remove>Save & Continue</span>
             <span wire:loading><x-spinner size="sm" text="Saving..." /></span>

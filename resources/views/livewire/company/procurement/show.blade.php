@@ -17,9 +17,7 @@
 
     <div class="row">
         <div class="col-md-8">
-            {{-- Summary (stable) --}}
-            <livewire:company.procurement.components.request-summary :requestId="$req->id"
-                wire:key="summary-{{ $req->id }}" />
+           
 
             {{-- Items (remount on structure changes only) --}}
             <div class="card mt-3" wire:key="items-card-{{ $req->id }}-v{{ $version }}">
@@ -47,6 +45,9 @@
 
         <div class="col-md-4">
         @include('livewire.company.procurement.components.partial-approvals-card')
+
+        {{-- Summary (stable) --}}
+        <livewire:company.procurement.components.request-summary :requestId="$req->id" wire:key="summary-{{ $req->id }}" />
        
         </div>
     </div>

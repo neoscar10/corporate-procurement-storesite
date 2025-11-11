@@ -63,7 +63,7 @@
             height="8" />
 
         <div class="d-flex justify-content-center mt-5">
-            <button class="btn btn-primary w-25 text-light waves-effect waves-light" wire:click="save"
+            <button class="btn btn-primary w-100 text-light waves-effect waves-light" wire:click="save"
                 wire:loading.attr="disabled" wire:target="save,pan_document,cin_document,gstin_document">
                 {{-- show normal label unless the SAVE action is running --}}
                 <span wire:loading.remove wire:target="save">
