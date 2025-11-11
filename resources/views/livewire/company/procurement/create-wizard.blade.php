@@ -43,18 +43,25 @@
         </div>
     
         <x-slot:footer>
-            <button class="btn btn-ghost-secondary material-shadow-none" data-bs-dismiss="modal"
-                wire:click="closeStep1">Cancel</button>
-            <button class="btn btn-primary text-light waves-effect waves-light" wire:click="saveStep1"
-                wire:loading.attr="disabled">
-                <span wire:loading.remove>Save & Continue</span>
-                <span wire:loading><x-ui.spinner size="sm" text="Saving..." /></span>
-            </button>
+            <div wire:key="step1-footer-save">
+                <button class="btn btn-ghost-secondary material-shadow-none" data-bs-dismiss="modal" wire:click="closeStep1">
+                    Cancel
+                </button>
+        
+                <button class="btn btn-primary text-light waves-effect waves-light" wire:click="saveStep1"
+                    wire:loading.attr="disabled" wire:target="saveStep1">
+                    <span wire:loading.remove wire:target="saveStep1">Save &amp; Continue</span>
+                    <span wire:loading wire:target="saveStep1">
+                        <x-ui.spinner size="sm" text="Saving..." />
+                    </span>
+                </button>
+            </div>
         </x-slot:footer>
+
     </x-ui.modal>
     
     {{-- Step 2: Budget & Logistics --}}
-    <x-ui.modal id="createStep2" :show="$showStep2" size="xl" wire:key="create-step2">
+    <x-ui.modal id="createStep2" :show="$showStep2" size="lg" wire:key="create-step2">
         <x-slot:title>Create Procurement — Step 2 (Budget & Logistics)</x-slot:title>
     
         <div class="row g-3">
@@ -65,17 +72,17 @@
                 </select>
                 @error('currency')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Budget Min (₹)</label>
                 <input type="number" step="0.01" class="form-control" wire:model.defer="budget_min">
                 @error('budget_min')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Budget Max (₹)</label>
                 <input type="number" step="0.01" class="form-control" wire:model.defer="budget_max">
                 @error('budget_max')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <label class="form-label">Payment Terms</label>
                 <select class="form-select" wire:model.defer="payment_terms">
                     <option value="">—</option>
@@ -83,22 +90,25 @@
                     <option value="net_30">30 days</option>
                     <option value="net_45">45 days</option>
                     <option value="net_50">50 days</option>
+                    <option value="on_delivery">On delivery</option>
                 </select>
                 @error('payment_terms')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
+            <div class="col-md-4">
+                <label class="form-label">Preferred Vendor Regions</label>
+                <input type="text" class="form-control" placeholder="e.g., Maharashtra, Gujarat"
+                    wire:model.defer="vendor_regions_input">
+            
+                @error('preferred_vendor_regions')<div class="text-danger small">{{ $message }}</div>@enderror
+            </div>
+
             <div class="col-md-6">
                 <label class="form-label">Delivery Location</label>
                 <textarea class="form-control" rows="2" wire:model.defer="delivery_location"></textarea>
                 @error('delivery_location')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Preferred Vendor Regions</label>
-                <input type="text" class="form-control" placeholder="e.g., Maharashtra, Gujarat"
-                    wire:model.defer="vendor_regions_input">
-                <small class="text-muted">Comma-separated; will be saved as a list.</small>
-                @error('preferred_vendor_regions')<div class="text-danger small">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-12">
+            
+            <div class="col-6">
                 <label class="form-label">Notes</label>
                 <textarea class="form-control" rows="2" wire:model.defer="notes"></textarea>
                 @error('notes')<div class="text-danger small">{{ $message }}</div>@enderror

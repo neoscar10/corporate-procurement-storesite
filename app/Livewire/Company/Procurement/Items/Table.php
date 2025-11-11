@@ -64,10 +64,13 @@ class Table extends Component
         $svc->deleteItem($item);
 
         $this->deleteId = null;
+        // after successful delete:
         session()->flash('success', 'Item deleted.');
+        $this->dispatch('lw:refresh-all');
 
-        $this->refreshItems();
-        $this->dispatch('request-updated');
+        $this->dispatch('request-updated');   // data changed
+        $this->dispatch('structure-changed'); // DOM needs remount for items list
+
     }
 
     private function computeCanMutate(): void

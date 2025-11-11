@@ -50,10 +50,15 @@
                 $companyAdminDashHref = Route::has('company.admin.dashboard') ? route('company.admin.dashboard') : '#';
                 $companyUserDashHref = Route::has('company.user.dashboard') ? route('company.user.dashboard') : '#';
 
-                // Procurements route: prefer your provided (typo) name, fallback to corrected name if you fix it later
+                // Company procurements route (handles earlier typo)
                 $companyProcHref = Route::has('comapany.procurements')
                     ? route('comapany.procurements')
                     : (Route::has('company.procurements') ? route('company.procurements') : '#');
+
+                // Super Admin • Published Requests
+                $saPublishedHref = Route::has('superadmin.procure.requests.index')
+                    ? route('superadmin.procure.requests.index')
+                    : '#';
             @endphp
 
             <ul class="navbar-nav" id="navbar-nav">
@@ -105,6 +110,15 @@
                             href="{{ $adminRequestsHref }}">
                             <i class="mdi mdi-clipboard-text-outline"></i>
                             <span>Registration Requests</span>
+                        </a>
+                    </li>
+
+                    {{-- NEW: Published Procurement Requests (Super Admin) --}}
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $active('superadmin.procure.requests.*') }}"
+                            href="{{ $saPublishedHref }}">
+                            <i class="mdi mdi-clipboard-check-outline"></i>
+                            <span>Procurement Requests</span>
                         </a>
                     </li>
                 @endif

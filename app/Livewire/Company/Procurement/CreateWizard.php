@@ -60,27 +60,27 @@ class CreateWizard extends Component
     }
 
     public function saveStep1(): void
-{
-    $this->validate([
-        'title' => ['required','string','max:255'],
-        'type'  => ['required','in:rfi,req,po,rfp'],
-        'priority' => ['required','in:low,medium,high,urgent'],
-        'desired_response_at'  => ['nullable','date'],
-        'expected_delivery_at' => ['nullable','date'],
-    ]);
+    {
+        $this->validate([
+            'title' => ['required','string','max:255'],
+            'type'  => ['required','in:rfi,req,po,rfp'],
+            'priority' => ['required','in:low,medium,high,urgent'],
+            'desired_response_at'  => ['nullable','date'],
+            'expected_delivery_at' => ['nullable','date'],
+        ]);
 
-    // flip state
-    $this->showStep1 = false;
-    $this->showStep2 = true;
+        // flip state
+        $this->showStep1 = false;
+        $this->showStep2 = true;
 
-    // explicitly close step1 and open step2 (Bootstrap)
-    $this->dispatch('close-create-step1');
-    $this->dispatch('open-create-step2');
+        // explicitly close step1 and open step2 (Bootstrap)
+        $this->dispatch('close-create-step1');
+        $this->dispatch('open-create-step2');
 
-    logger()->info('CreateWizard::saveStep1 passed, opening Step 2');
-}
+        logger()->info('CreateWizard::saveStep1 passed, opening Step 2');
+    }
 
-    public function saveStep2(ProcurementRequestService $svc)
+   public function saveStep2(ProcurementRequestService $svc)
     {
         $this->preferred_vendor_regions = $this->parseRegions($this->vendor_regions_input);
 
@@ -88,7 +88,8 @@ class CreateWizard extends Component
             'currency' => ['required','in:INR'],
             'budget_min' => ['nullable','numeric','min:0'],
             'budget_max' => ['nullable','numeric','gte:budget_min'],
-            'payment_terms' => ['nullable','in:advance,net_30,net_45,net_50'],
+            'payment_terms' => ['nullable','in:advance,net_30,net_45,net_50,on_delivery'],
+
             'delivery_location' => ['nullable','string'],
             'preferred_vendor_regions' => ['nullable','array'],
             'preferred_vendor_regions.*' => ['string','max:100'],
@@ -97,13 +98,15 @@ class CreateWizard extends Component
 
         $user = Auth::user();
         $companyId = CompanyMember::where('user_id',$user->id)->where('is_active',true)->value('company_id');
-
         if (! $companyId) {
             $this->addError('title', 'Company context missing. Complete company onboarding.');
             return;
         }
 
-        // Only now create the draft record
+        // Build step2 with the **singular** key expected by the service.
+        // Store as CSV string so it works with TEXT/VARCHAR columns.
+        $regionsCsv = implode(', ', array_filter($this->preferred_vendor_regions));
+
         $req = $svc->createDraft(
             companyId: $companyId,
             creatorId: $user->id,
@@ -115,20 +118,21 @@ class CreateWizard extends Component
                 'expected_delivery_at' => $this->expected_delivery_at ?: null,
             ],
             step2: [
-                'currency' => $this->currency,
-                'budget_min' => $this->budget_min,
-                'budget_max' => $this->budget_max,
-                'payment_terms' => $this->payment_terms,
-                'delivery_location' => $this->delivery_location,
-                'preferred_vendor_regions' => $this->preferred_vendor_regions,
-                'notes' => $this->notes,
+                'currency'            => $this->currency,
+                'budget_min'          => $this->budget_min,
+                'budget_max'          => $this->budget_max,
+                'payment_terms'       => $this->payment_terms,
+                'delivery_location'   => $this->delivery_location,
+                'preferred_vendor_region' => $regionsCsv, // <-- singular key, CSV value
+                'notes'               => $this->notes,
             ]
         );
 
         $this->showStep2 = false;
         session()->flash('success','Request created. You can now add items and submit for approval.');
-        redirect()->route('company.procure.requests.show', $req->id);
+        return redirect()->route('company.procure.requests.show', $req->id);
     }
+
 
     private function parseRegions(?string $input): array
     {

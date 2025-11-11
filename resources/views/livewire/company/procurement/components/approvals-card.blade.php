@@ -3,9 +3,9 @@
         <h5 class="mb-0">Approvals</h5>
 
         @php
-            $hasApprovalRows = $req->approvals->count() > 0;           // only after "Request Approvals"
-            $meRow = $mergedRows->firstWhere('is_me', true);
-            $meIsPending = $hasApprovalRows && $meRow && strtolower($meRow->status) === 'pending' && $status !== 'published';
+$hasApprovalRows = $req->approvals->count() > 0;           // only after "Request Approvals"
+$meRow = $mergedRows->firstWhere('is_me', true);
+$meIsPending = $hasApprovalRows && $meRow && strtolower($meRow->status) === 'pending' && $status !== 'published';
         @endphp
 
         <div class="d-flex gap-2">
@@ -23,7 +23,7 @@
             @endif
 
             {{-- Creator-only: request approvals (create rows + notify) --}}
-            @if($isCreator && !$req->approvals->count() && $status !== 'published')
+            @if($isCreator && !$req->approvals->count() && $status !== 'published' && $req->items->count())
                 <button class="btn btn-outline-primary btn-sm material-shadow-none" wire:click="requestApprovals"
                     wire:loading.attr="disabled" wire:target="requestApprovals">
                     <span wire:loading.remove wire:target="requestApprovals">
@@ -63,31 +63,32 @@
     </div>
 
     <div class="card-body">
-        <x-alerts.flash />
+      
 
         @php
-            $badge = function ($s) {
-                $s = is_string($s) ? strtolower($s) : (string) $s;
-                return match ($s) {
-                    'approved' => ['badge bg-success-subtle text-success', 'APPROVED'],
-                    'rejected' => ['badge bg-danger-subtle text-danger', 'REJECTED'],
-                    'pending' => ['badge bg-secondary-subtle text-secondary', 'PENDING'],
-                    default => ['badge bg-secondary-subtle text-secondary', strtoupper($s)],
-                };
-            };
+$badge = function ($s) {
+    $s = is_string($s) ? strtolower($s) : (string) $s;
+    return match ($s) {
+        'approved' => ['badge bg-success-subtle text-success', 'APPROVED'],
+        'rejected' => ['badge bg-danger-subtle text-danger', 'REJECTED'],
+        'pending' => ['badge bg-secondary-subtle text-secondary', 'PENDING'],
+        default => ['badge bg-secondary-subtle text-secondary', strtoupper($s)],
+    };
+};
         @endphp
 
         @if($mergedRows->isEmpty())
             <div class="text-muted">No approvers resolved for this request.</div>
         @else
             <div class="table-responsive">
-                <table class="table table-sm align-middle">
+                <table class="table table-sm align-middle" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width: 50%;">
+                        <col style="width: 50%;">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Approver</th>
-                            <th>Status</th>
-                            <th>Approved At</th>
-                            <th>Rejected At</th>
                             <th>Comment</th>
                         </tr>
                     </thead>
@@ -96,37 +97,29 @@
                             @php [$cls, $txt] = $badge($row->status); @endphp
                             <tr>
                                 <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-xs me-2">
-                                            <span class="avatar-title rounded-circle bg-soft-primary text-primary">
-                                                {{ strtoupper(substr($row->name, 0, 1)) }}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">
-                                                {{ $row->name }}
-                                                @if($row->is_me)
-                                                    <span class="badge bg-light text-muted ms-1">You</span>
-                                                @endif
-                                            </div>
-                                            <div class="text-muted small">{{ $row->email }}</div>
-                                        </div>
+                                    <div class="fw-semibold">
+                                        {{ $row->name }}
+                                        <span class="{{ $cls }} ms-1">{{ $txt }}</span>
+                                       
                                     </div>
+                                    <spa class="text-muted small">{{ $row->email }}</span>
                                 </td>
-                                <td><span class="{{ $cls }}">{{ $txt }}</span></td>
-                                <td>{{ optional($row->approved_at)->format('Y-m-d H:i') ?? '—' }}</td>
-                                <td>{{ optional($row->rejected_at)->format('Y-m-d H:i') ?? '—' }}</td>
-                                <td class="text-truncate" style="max-width:360px;">{{ $row->comment ?? '—' }}</td>
+
+                                {{-- Wrap inside cell; break long words/URLs; never overflow the card --}}
+                                <td class="text-wrap text-break" style="overflow-wrap:anywhere; white-space:normal;">
+                                    {{ $row->comment ?? '—' }}
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
+
         @endif
     </div>
 
     {{-- Approve Confirm --}}
-    <x-ui.confirm id="approveConfirm" size="md" wire:model="confirmApproveOpen">
+    <x-ui.confirm id="approveConfirm" size="md" wire:model="confirmApproveOpen" wire:ignore.self>
         <x-slot:title>Confirm Approval</x-slot:title>
         <div>Are you sure you want to <span class="fw-semibold text-success">approve</span> this request?</div>
         <x-slot:confirm>

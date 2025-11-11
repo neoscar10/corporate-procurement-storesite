@@ -19,6 +19,7 @@ class ApprovalsCard extends Component
     protected $listeners = [
         'approvals-refresh' => '$refresh',
         'request-updated'   => '$refresh',
+        'lw:refresh-all'    => '$refresh',
     ];
 
 
@@ -106,12 +107,14 @@ class ApprovalsCard extends Component
 
         if ($this->req->approvals()->exists()) {
             session()->flash('success', 'Approvals already requested.');
+            $this->dispatch('lw:refresh-all');
             $this->dispatch('request-updated');
             return;
         }
 
         $svc->submitForApproval($this->req->fresh());
         session()->flash('success', 'Approvals requested. Approvers have been notified.');
+        $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
     }
 
@@ -140,6 +143,7 @@ class ApprovalsCard extends Component
 
         $this->confirmApproveOpen = false;
         session()->flash('success', 'You approved this request.');
+        $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
         $this->dispatch('close-approve-confirm-js');
     }
@@ -159,6 +163,7 @@ class ApprovalsCard extends Component
         $this->rejectOpen = false;
         $this->rejectComment = '';
         session()->flash('success', 'You rejected this request.');
+        $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
         $this->dispatch('close-reject-modal-js');
     }
@@ -170,6 +175,7 @@ class ApprovalsCard extends Component
 
         $svc->publish($this->req->fresh());
         session()->flash('success', 'Request published.');
+        $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
     }
 
@@ -180,6 +186,7 @@ class ApprovalsCard extends Component
 
         $svc->publishByAdmin($this->req->fresh(), Auth::user());
         session()->flash('success', 'Request published by Company Admin.');
+        $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
     }
 

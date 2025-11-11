@@ -48,7 +48,7 @@ class Onboarding extends Component
 
         // If approved, skip onboarding entirely
         if ($this->companyStatus === 'approved') {
-            redirect()->route('company.admin.dashboard')->send();
+            redirect()->route('company.admin.dashboard');
             return;
         }
 

@@ -60,39 +60,70 @@ class Index extends Component
         $this->perPage = (int)($filters['perPage'] ?? 10);
     }
 
-    #[On('request-delete-ask')]
-    public function confirmDelete(int $id): void { $this->deleteId = $id; }
+   #[On('request-delete-ask')]
+public function confirmDelete(array $payload): void
+{
+    $this->deleteId = (int) ($payload['id'] ?? 0);
+    if ($this->deleteId <= 0) return;
 
-    public function deleteDraft(): void
-    {
-        if (! $this->deleteId) return;
+    // Tell the browser to open the Bootstrap modal
+    $this->dispatch('confirm-delete:open');
+}
 
-        $user = Auth::user();
-        $companyId = CompanyMember::where('user_id', $user->id)->where('is_active', true)->value('company_id');
+#[On('delete-draft-confirmed')]
+public function handleDeleteConfirmed(): void
+{
+    $this->deleteDraft(); // call the actual deletion
+}
 
-        $row = DB::table('procurement_requests')
-            ->where('id', $this->deleteId)
-            ->where('company_id', $companyId)
-            ->first(['id','status']);
-
-        if (! $row) {
-            $this->deleteId = null;
-            session()->flash('error', 'Request not found or not allowed.');
-            return;
-        }
-
-        $st = strtolower((string) $row->status);
-        if (! in_array($st, ['draft','cancelled','canceled'], true)) {
-            $this->deleteId = null;
-            session()->flash('error', 'Only drafts or cancelled requests can be deleted.');
-            return;
-        }
-
-        DB::table('procurement_requests')->where('id', $this->deleteId)->delete();
-        $this->deleteId = null;
-        session()->flash('success', 'Request deleted.');
-        $this->dispatch('table-refresh');
+public function deleteDraft(): void
+{
+    if (! $this->deleteId) {
+        session()->flash('error', 'Nothing to delete.');
+        return;
     }
+
+    $user = Auth::user();
+    $companyId = CompanyMember::where('user_id', $user->id)
+        ->where('is_active', true)
+        ->value('company_id');
+
+    $row = DB::table('procurement_requests')
+        ->where('id', $this->deleteId)
+        ->where('company_id', $companyId)
+        ->first(['id','status']);
+
+    if (! $row) {
+        $this->deleteId = null;
+        session()->flash('error', 'Request not found or not allowed.');
+        $this->dispatch('confirm-delete:close');
+        return;
+    }
+
+    $st = strtolower((string) $row->status);
+    if (! in_array($st, ['draft','cancelled','canceled'], true)) {
+        $this->deleteId = null;
+        session()->flash('error', 'Only drafts or cancelled requests can be deleted.');
+        $this->dispatch('confirm-delete:close');
+        return;
+    }
+
+    try {
+        DB::table('procurement_requests')->where('id', $this->deleteId)->delete();
+        session()->flash('success', 'Request deleted.');
+    } catch (\Throwable $e) {
+        report($e);
+        session()->flash('error', 'Unable to delete. Remove related items/attachments or enable ON DELETE CASCADE.');
+        $this->dispatch('confirm-delete:close');
+        return;
+    }
+
+    $this->deleteId = null;            // clear selection
+    $this->dispatch('confirm-delete:close'); // close Bootstrap modal
+    $this->dispatch('table-refresh');        // child table listens and refreshes
+}
+
+
 
     public function render()
     {

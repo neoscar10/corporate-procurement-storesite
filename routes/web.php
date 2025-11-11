@@ -13,8 +13,12 @@ use App\Services\Auth\WebAuthService;
 use App\Livewire\Admin\Companies\Requests\Index as CompanyRequestsIndex;
 use App\Livewire\Admin\Companies\Requests\Show as CompanyRequestsShow;
 use App\Livewire\Admin\Dashbaord\AdminDashboard as DashbaordAdminDashboard;
+use App\Livewire\Company\Dashboards\UserDashboard as userDashboard;
 use App\Livewire\Company\Procurement\Index as CompanyProcIndex;
 use App\Livewire\Company\Procurement\Show as CompanyProcureShow;
+use App\Livewire\Company\Procurement\Items\Show as ItemShow;
+use App\Livewire\Admin\Procurement\Index as SaProcureIndex;
+
 
 Route::middleware('guest')->get('/register', WizardPage::class)->name('register');
 
@@ -37,20 +41,29 @@ Route::post('/logout', function (WebAuthService $auth) {
     Route::middleware('auth')->group(function(){
     Route::get('admin/dashboard', AdminDashboard::class)->name('company.admin.dashboard');
     Route::get('admin/onboarding', Onboarding::class)->name('company.onboarding');
+
+    Route::get('company/user-dashboard', userDashboard::class)->name('company.user.dashboard');
     
+    // Company users all
     Route::get('company/procurements', CompanyProcIndex::class)->name('company.procurements');
     Route::get('/procure/requests/{requestId}', CompanyProcureShow::class)
         ->name('company.procure.requests.show');
+
+    Route::get('company/procure/requests/{request}/items/{item}', ItemShow::class)
+            ->name('company.procure.requests.items.show');
 });
-
-
-
 
 
 // Super admon routes, no middleware yet
 Route::middleware(['auth'])->prefix('admin/companies')->name('admin.company.')->group(function () {
     Route::get('/requests', CompanyRequestsIndex::class)->name('requests.index');
     Route::get('/requests/{company}', CompanyRequestsShow::class)->name('requests.show');
+
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/super-admin/procure/requests', SaProcureIndex::class)
+        ->name('superadmin.procure.requests.index');
 });
 
 Route::get('/super-admin/dashboard', \App\Livewire\Admin\Dashbaord\AdminDashboard::class)->name('admin.dashboard');

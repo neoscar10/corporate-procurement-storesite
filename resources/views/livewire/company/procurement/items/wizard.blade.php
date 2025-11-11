@@ -279,6 +279,30 @@
       </div>
     @endif
 
+    {{-- Product URLs --}}
+    <div class="col-12 mt-2">
+        <label class="form-label">Product URLs</label>
+        @foreach($product_urls as $i => $url)
+            <div class="row g-2 align-items-center mb-1" wire:key="url-{{ $i }}">
+                <div class="col-md-10">
+                    <input type="url" class="form-control" placeholder="https://example.com/product"
+                          wire:model.defer="product_urls.{{ $i }}">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-light btn-sm w-100"
+                            wire:click.prevent="removeUrlRow({{ $i }})">Remove</button>
+                </div>
+            </div>
+        @endforeach
+
+        <button class="btn btn-soft-primary btn-sm mt-1"
+                wire:click.prevent="addUrlRow">+ Add URL</button>
+
+        @error('product_urls.*')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
+    </div>
+
+
+
   </div>
 
   {{-- Footer actions --}}

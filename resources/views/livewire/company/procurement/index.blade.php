@@ -5,9 +5,9 @@
         <x-slot:actions>
             @if ($this->canCreate)
                 <button class="btn btn-primary waves-effect waves-light" wire:click="openCreate"
-                    wire:loading.attr="disabled">
-                    <span wire:loading.remove><i class="mdi mdi-plus"></i> New Request</span>
-                    <span wire:loading><x-ui.spinner size="sm" text="Opening..." /></span>
+                    >
+                    <span><i class="mdi mdi-plus"></i> New Request</span>
+                    
                 </button>
             @endif
         </x-slot:actions>
@@ -25,15 +25,30 @@
     <livewire:company.procurement.create-wizard wire:key="create-wizard" />
 
     {{-- Delete confirm --}}
-    <x-ui.confirm id="confirmDeleteModal" wire:model="deleteId">
+    <x-ui.confirm id="confirmDeleteModal" wire:ignore.self>
         <x-slot:title>Delete Request</x-slot:title>
         <div>Are you sure you want to delete this request? This action cannot be undone.</div>
         <x-slot:confirm>
-            <button class="btn btn-danger text-light waves-effect waves-light" wire:click="deleteDraft"
-                wire:loading.attr="disabled" data-bs-dismiss="modal">
-                <span wire:loading.remove>Delete</span>
-                <span wire:loading><x-ui.spinner size="sm" text="Deleting..." /></span>
+            <button class="btn btn-danger text-light waves-effect waves-light"
+                wire:click.prevent="$dispatchTo('company.procurement.index','delete-draft-confirmed')">
+                Delete
             </button>
         </x-slot:confirm>
     </x-ui.confirm>
+
 </div>
+
+
+@push('scripts')
+    <script>
+        document.addEventListener('livewire:init', () => {
+            const getModal = () => {
+                const el = document.getElementById('confirmDeleteModal');
+                return el ? bootstrap.Modal.getOrCreateInstance(el) : null;
+            };
+
+            Livewire.on('confirm-delete:open', () => { const m = getModal(); if (m) m.show(); });
+            Livewire.on('confirm-delete:close', () => { const m = getModal(); if (m) m.hide(); });
+        });
+    </script>
+@endpush

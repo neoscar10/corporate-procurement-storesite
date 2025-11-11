@@ -282,7 +282,37 @@
         })();
     </script>
 
-   
+    {{-- Soft reload --}}
+    @push('scripts')
+        <script>
+            document.addEventListener('livewire:init', () => {
+                const closeAllModals = () => {
+                    try {
+                        document.querySelectorAll('.modal.show').forEach(el => {
+                            try { bootstrap.Modal.getOrCreateInstance(el).hide(); } catch (_) { }
+                        });
+                        document.body.classList.remove('modal-open');
+                        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                    } catch (_) { }
+                };
+
+                // Global soft-reload: morph the whole page without a hard refresh.
+                window.addEventListener('lw:refresh-all', () => {
+                    closeAllModals();
+                    try {
+                        if (window.Livewire && typeof Livewire.navigate === 'function') {
+                            Livewire.navigate(window.location.href, { replace: true, preserveScroll: true });
+                        } else {
+                            // Fallback (should rarely happen)
+                            window.location.assign(window.location.href);
+                        }
+                    } catch (_) {
+                        window.location.assign(window.location.href);
+                    }
+                });
+            });
+        </script>
+    @endpush
 
     @stack('scripts')
     @livewireScripts

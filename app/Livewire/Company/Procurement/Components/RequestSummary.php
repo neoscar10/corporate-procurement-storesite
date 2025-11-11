@@ -2,27 +2,28 @@
 
 namespace App\Livewire\Company\Procurement\Components;
 
+use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Procurement\ProcurementRequest;
 
 class RequestSummary extends Component
 {
     public int $requestId;
-    public ProcurementRequest $req;
 
-    public function mount(int $requestId)
+    public function getReqProperty(): ProcurementRequest
     {
-        $this->req = ProcurementRequest::withCount(['items','attachments'])->findOrFail($requestId);
+        return ProcurementRequest::withCount(['items', 'attachments'])->findOrFail($this->requestId);
     }
-    protected $listeners = [
-        'request-updated' => '$refresh',
-    ];
 
+    #[On('summary-refresh')]
+    #[On('request-updated')]
+    public function nudge(): void {}
 
     public function render()
     {
         return view('livewire.company.procurement.components.request-summary', [
-            'req' => $this->req
+            'req' => $this->req,
         ]);
     }
 }
+

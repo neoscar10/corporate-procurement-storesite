@@ -53,6 +53,8 @@ class Wizard extends Component
     // Attachments
     public array $files = [];
 
+    public array $product_urls = [''];
+
     //  Persisted across steps
     public ?int $itemId = null;   // <-- use this instead of a protected $item
 
@@ -68,6 +70,9 @@ class Wizard extends Component
         $this->itemId = null;      // new item
         $this->show = true;
         $this->step = 1;
+
+        // sensible default for product urls
+        $this->product_urls = [''];
 
         $this->dispatch('open-item-wizard-js');
     }
@@ -95,7 +100,7 @@ class Wizard extends Component
 
         if ($item->kind === 'product') {
             $ps = $item->productSpec;
-            $this->brand                 = $ps->brand ?? null;
+            $this->brand = $ps->brand ?? null;
             $this->model                 = $ps->model ?? null;
             $this->quality_level         = $ps->quality_level ?? null;
             $this->packaging_requirement = $ps->packaging_requirement ?? null;
@@ -103,6 +108,9 @@ class Wizard extends Component
             $this->technical_specs       = $ps && is_array($ps->technical_specs ?? null)
                                             ? array_values($ps->technical_specs)
                                             : [['key'=>'','value'=>'']];
+             $this->product_urls = is_array($ps->product_urls ?? null) && !empty($ps->product_urls)
+                ? array_values($ps->product_urls)
+                : [''];
         } else { // service
             $ss = $item->serviceSpec;
             $this->service_budget_mode   = $item->service_budget_mode ?? null;
@@ -206,7 +214,14 @@ class Wizard extends Component
                 'quality_level'=>'nullable|string|max:100',
                 'packaging_requirement'=>'nullable|string|max:150',
                 'inspection_required'=>'boolean',
+                'product_urls'            => 'array',              // <— NEW
+                'product_urls.*'          => 'nullable|url|max:2048', // <— NEW
             ]);
+
+            $cleanUrls = array_values(array_filter(
+                array_map(fn($u) => trim((string)$u), $this->product_urls ?? []),
+                fn($u) => $u !== ''
+            ));
             $svc->saveItemSpecs($item, [
                 'brand'=>$this->brand,
                 'model'=>$this->model,
@@ -217,7 +232,8 @@ class Wizard extends Component
                     $this->technical_specs,
                     fn($r)=>($r['key']??'')!=='' || ($r['value']??'')!==''
                 )),
-            ]);
+                'product_urls'          => $cleanUrls, 
+                ]);
         } else { // service
             $this->validate([
                 'scope_of_work'=>'nullable|string',
@@ -243,20 +259,61 @@ class Wizard extends Component
     public function saveAttachments(ProcurementItemService $fileSvc): void
     {
         if (!$this->itemId) abort(400,'Item not initialized.');
-        $item = ProcurementItem::findOrFail($this->itemId); // <-- re-fetch
+        $item = ProcurementItem::with('productSpec')->findOrFail($this->itemId);
 
-        $this->validate(['files.*'=>'file|max:10240']); // 10MB each
+        // 1) Validate files
+        $this->validate(['files.*' => 'file|max:10240']);
 
+        // 2) If PRODUCT, validate & persist product_urls entered in Step 3
+        if ($this->kind === 'product') {
+            $this->validate([
+                'product_urls'   => 'array',
+                'product_urls.*' => 'nullable|url|max:2048',
+            ]);
+
+            // Normalize & remove empties
+            $cleanUrls = array_values(array_filter(
+                array_map(fn($u) => trim((string)$u), $this->product_urls ?? []),
+                fn($u) => $u !== ''
+            ));
+
+            // Update or create spec with just the URLs (safe partial update)
+            $item->productSpec()->updateOrCreate(
+                ['procurement_item_id' => $item->id],
+                ['product_urls' => !empty($cleanUrls) ? $cleanUrls : null]
+            );
+        }
+
+        // 3) Attach files
         $fileSvc->attachFiles($item, $this->files);
+
+        // 4) Finalize the item
         app(ProcurementRequestService::class)->finalizeItem($item);
 
+        // 5) Refresh UI
         $this->dispatch('request-updated');
         $this->dispatch('items-refresh');
+        $this->dispatch('structure-changed');
 
         session()->flash('success','Item added.');
+        $this->dispatch('lw:refresh-all');
         $this->itemId = null;
         $this->close();
     }
+
+
+    public function addUrlRow(): void
+    {
+        $this->product_urls[] = '';
+    }
+    public function removeUrlRow(int $i): void
+    {
+        if (isset($this->product_urls[$i])) {
+            unset($this->product_urls[$i]);
+            $this->product_urls = array_values($this->product_urls);
+        }
+    }
+
 
     public function render(){ return view('livewire.company.procurement.items.wizard'); }
 }

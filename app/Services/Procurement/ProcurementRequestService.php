@@ -77,29 +77,39 @@ class ProcurementRequestService
 
     /** Save specs (branch to product/service) */
     public function saveItemSpecs(ProcurementItem $item, array $specs): void
-    {
+        {
         if ($item->kind === ItemKind::PRODUCT->value) {
+            $urls = [];
+            if (isset($specs['product_urls'])) {
+                $urls = array_values(array_filter(
+                    array_map(fn($u) => trim((string)$u), (array) $specs['product_urls']),
+                    fn($u) => $u !== ''
+                ));
+            }
+
             $item->productSpec()->updateOrCreate(
-                ['procurement_item_id'=>$item->id],
+                ['procurement_item_id' => $item->id],
                 [
-                    'brand' => $specs['brand'] ?? null,
-                    'model' => $specs['model'] ?? null,
-                    'quality_level' => $specs['quality_level'] ?? null,
-                    'packaging_requirement' => $specs['packaging_requirement'] ?? null,
-                    'inspection_required' => (bool)($specs['inspection_required'] ?? false),
-                    'technical_specs' => $specs['technical_specs'] ?? null,
+                    'brand'                  => $specs['brand'] ?? null,
+                    'model'                  => $specs['model'] ?? null,
+                    'quality_level'          => $specs['quality_level'] ?? null,
+                    'packaging_requirement'  => $specs['packaging_requirement'] ?? null,
+                    'inspection_required'    => (bool)($specs['inspection_required'] ?? false),
+                    'technical_specs'        => $specs['technical_specs'] ?? null,
+                    'product_urls'           => !empty($urls) ? $urls : null, // <-- add this
                 ]
-            );
+            );  
         } elseif ($item->kind === ItemKind::SERVICE->value) {
             $item->serviceSpec()->updateOrCreate(
                 ['procurement_item_id'=>$item->id],
                 [
-                    'scope_of_work' => $specs['scope_of_work'] ?? null,
-                    'deliverables' => $specs['deliverables'] ?? null,
+                    'scope_of_work'  => $specs['scope_of_work'] ?? null,
+                    'deliverables'   => $specs['deliverables'] ?? null,
                     'key_personnels' => $specs['key_personnels'] ?? null,
                 ]
             );
         }
+
         $item->update(['spec_completed_at'=>now()]);
     }
 
