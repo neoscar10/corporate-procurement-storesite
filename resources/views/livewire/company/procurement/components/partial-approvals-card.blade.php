@@ -4,11 +4,11 @@
                 <h5 class="mb-0 me-2">Approvals</h5>
         
                 @php
-                    $hasApprovalRows = $req->approvals->count() > 0;
-                    $meRow = $mergedRows->firstWhere('is_me', true);
-                    $meIsPending = $hasApprovalRows && $meRow
-                        && strtolower((string) ($meRow->status ?? '')) === 'pending'
-                        && $status !== 'published';
+$hasApprovalRows = $req->approvals->count() > 0;
+$meRow = $mergedRows->firstWhere('is_me', true);
+$meIsPending = $hasApprovalRows && $meRow
+    && strtolower((string) ($meRow->status ?? '')) === 'pending'
+    && $status !== 'published';
                 @endphp
         
                 <div class="d-flex gap-2 flex-wrap ms-auto">
@@ -75,20 +75,20 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Approver</th>
-                                    <th>Comment</th>
+                                    
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($mergedRows as $row)
-                                    @php
-                                        $statusNorm = strtolower((string) ($row->status ?? 'pending'));
-                                        $badgeCls = match ($statusNorm) {
-                                            'approved' => 'badge bg-success-subtle text-success',
-                                            'rejected' => 'badge bg-danger-subtle text-danger',
-                                            'pending' => 'badge bg-secondary-subtle text-secondary',
-                                            default => 'badge bg-secondary-subtle text-secondary',
-                                        };
-                                        $badgeText = strtoupper($statusNorm);
+                                                                @php
+        $statusNorm = strtolower((string) ($row->status ?? 'pending'));
+        $badgeCls = match ($statusNorm) {
+            'approved' => 'badge bg-success-subtle text-success',
+            'rejected' => 'badge bg-danger-subtle text-danger',
+            'pending' => 'badge bg-secondary-subtle text-secondary',
+            default => 'badge bg-secondary-subtle text-secondary',
+        };
+        $badgeText = strtoupper($statusNorm);
                                     @endphp
                                     <tr>
                                         <td>
@@ -98,9 +98,18 @@
                                             </div>
                                             <span class="text-muted small">{{ $row->email }}</span>
                                         </td>
-                                        <td class="text-wrap text-break" style="overflow-wrap:anywhere; white-space:normal;">
-                                            {{ $row->comment ?? '—' }}
+                                        {{-- Comment / Reason --}}
+                                        <td>
+                                            @if($row->comment && $row->status === 'rejected')
+                                                <button class="btn btn-primary btn-sm text-light waves-effect waves-light"
+                                                    wire:click="openReason({{ $row->approver_id }})">
+                                                    <i class="mdi mdi-eye-outline align-middle me-1"></i> View Reason
+                                                </button>
+                                            @else
+                                            <span class="text-muted"></span>
+                                            @endif
                                         </td>
+
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -145,6 +154,63 @@
                     </button>
                 </x-slot:footer>
             </x-ui.modal>
+
+            {{-- View Reason (Approver note) --}}
+            <x-ui.modal id="viewReasonModal" :show="$viewReasonOpen" size="md" wire:ignore.self
+                wire:key="view-reason-modal-{{ $req->id }}">
+                <x-slot:title>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="mdi mdi-comment-text-outline text-primary fs-5"></i>
+                        <span>Approval Note</span>
+                    </div>
+                </x-slot:title>
+            
+                @php
+                    $row = $req->approvals->firstWhere('approver_id', $viewReasonBy);
+                    $status = strtolower($row->status ?? '');
+                    [$badgeCls, $badgeTxt] = match ($status) {
+                        'approved' => ['badge bg-success-subtle text-success', 'APPROVED'],
+                        'rejected' => ['badge bg-danger-subtle text-danger', 'REJECTED'],
+                        'pending' => ['badge bg-secondary-subtle text-secondary', 'PENDING'],
+                        default => ['badge bg-secondary-subtle text-secondary', strtoupper($status ?: 'PENDING')],
+                    };
+                    $when = $row?->approved_at ?: $row?->rejected_at;
+                    $whenStr = $when ? \Carbon\Carbon::parse($when)->format('F j, Y • g:i A') : '—';
+                @endphp
+            
+                <div class="mb-3 d-flex align-items-start gap-3">
+                    <div class="avatar-sm flex-shrink-0">
+                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary">
+                            <i class="mdi mdi-account-outline"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">
+                            {{ $row?->approver?->name ?? 'User #' . $viewReasonBy }}
+                            <span class="{{ $badgeCls }} ms-2 align-middle">{{ $badgeTxt }}</span>
+                        </div>
+                        <div class="text-muted small">
+                            {{ $row?->approver?->email ?? '—' }} &middot; {{ $whenStr }}
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="border rounded bg-light-subtle p-3" >
+                    {{ $viewReasonText }}
+                </div>
+            
+                <x-slot:footer>
+                    <div class="d-flex w-100 justify-content-between">
+                        <button class="btn btn-light material-shadow-none" data-bs-dismiss="modal"
+                            wire:click="$set('viewReasonOpen', false)">
+                            Close
+                        </button>
+                    </div>
+                </x-slot:footer>
+            </x-ui.modal>
+
+
+
             {{-- Force-open Approvals confirm via browser events (same pattern as Items) --}}
             <script>
                 window.addEventListener('open-approve-confirm', () => {
@@ -157,6 +223,28 @@
                     if (el) bootstrap.Modal.getOrCreateInstance(el).show();
                 });
             </script>
+
+            <script>
+                window.addEventListener('open-view-reason-js', () => {
+                    const el = document.getElementById('viewReasonModal');
+                    if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+                });
+
+                window.addEventListener('close-view-reason-js', () => {
+                    const el = document.getElementById('viewReasonModal');
+                    if (el) bootstrap.Modal.getOrCreateInstance(el).hide();
+                });
+
+                // keep Livewire state in sync if user closes via X/ESC/backdrop
+                document.addEventListener('hidden.bs.modal', (e) => {
+                    if (e.target && e.target.id === 'viewReasonModal') {
+                        const root = e.target.closest('[wire\\:id]');
+                        const comp = root ? window.Livewire?.find(root.getAttribute('wire:id')) : null;
+                        if (comp) comp.set('viewReasonOpen', false);
+                    }
+                });
+            </script>
+
 
 
         </div>

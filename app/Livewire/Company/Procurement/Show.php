@@ -18,10 +18,14 @@ class Show extends Component
     /** bump to force remount of items list only */
     public int $version = 0;
 
-    // --- Approvals UI state (moved here from the child) ---
+    // --- Approvals UI state ---
     public bool $confirmApproveOpen = false;
     public bool $rejectOpen = false;
     public string $rejectComment = '';
+    // view reason modal state
+   public bool $viewReasonOpen = false;
+    public string $viewReasonText = '';
+    public ?int $viewReasonBy = null;
 
     protected $listeners = [
         'request-updated'   => 'onRequestUpdated',
@@ -149,6 +153,17 @@ class Show extends Component
             ->to('company.procurement.items.wizard');
 
         $this->dispatch('open-item-wizard-js');
+    }
+    public function openReason(int $approverId): void
+    {
+        $row = $this->req->fresh('approvals')->approvals->firstWhere('approver_id', $approverId);
+
+        $this->viewReasonBy   = $approverId;
+        $this->viewReasonText = trim((string) ($row->comment ?? '')) ?: 'No reason provided.';
+        $this->viewReasonOpen = true;
+
+        // match the pattern you already use: *-js
+        $this->dispatch('open-view-reason-js');
     }
 
     public function openEditDetails(): void

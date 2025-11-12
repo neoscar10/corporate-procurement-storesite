@@ -298,43 +298,71 @@ class ProcurementRequestService
 
     /** Derive approvers from ApprovalWorkflow/Steps or fallback to permission holders. */
     public function resolveApprovers(ProcurementRequest $req): array
-    {
-        // Prefer company workflow with thresholds
-        $flow = \App\Models\Company\ApprovalWorkflow::where('company_id',$req->company_id)->first();
-        $amount = $req->budget_max ?? $req->budget_min ?? 0;
+{
+    // 1) Prefer workflow (threshold-based)
+    $flow = \App\Models\Company\ApprovalWorkflow::where('company_id', $req->company_id)->first();
+    $amount = $req->budget_max ?? $req->budget_min ?? 0;
 
-        $ids = [];
-        if ($flow) {
-            $steps = \App\Models\Company\ApprovalStep::where('approval_workflow_id',$flow->id)
-                ->orderBy('order')
-                ->get();
-            foreach ($steps as $s) {
-                if (is_null($s->threshold_amount) || $amount <= $s->threshold_amount) {
-                    if ($s->approver_user_id) $ids[] = (int) $s->approver_user_id;
-                }
+    $ids = [];
+    if ($flow) {
+        $steps = \App\Models\Company\ApprovalStep::where('approval_workflow_id', $flow->id)
+            ->orderBy('order')
+            ->get();
+
+        foreach ($steps as $s) {
+            if (is_null($s->threshold_amount) || $amount <= $s->threshold_amount) {
+                if ($s->approver_user_id) $ids[] = (int) $s->approver_user_id;
             }
         }
-
-        // Fallback: everyone with permission 'approve_procurement' in the company
-        if (empty($ids)) {
-            $ids = \App\Models\User::query()
-                ->whereHas('companyMembers', function ($q) use ($req) {
-                    $q->where('company_id', $req->company_id)
-                    ->where('is_active', true);
-                })
-                ->whereHas('permissions', function ($q) {
-                    // target actual table names inside whereHas
-                    $q->where('permissions.name', 'approve_procurement')
-                    ->where('user_permission.is_enabled', true);
-                })
-                ->pluck('users.id')
-                ->map(fn ($i) => (int) $i)
-                ->all();
-        }
-
-
-        return array_values(array_unique($ids));
     }
+
+    // 2) Fallback: all users in company with approve_procurement permission (enabled)
+    if (empty($ids)) {
+        $ids = \App\Models\User::query()
+            ->whereHas('companyMembers', function ($q) use ($req) {
+                $q->where('company_id', $req->company_id)
+                  ->where('is_active', true);
+            })
+            ->whereHas('permissions', function ($q) {
+                $q->where('permissions.name', 'approve_procurement')
+                  ->where('user_permission.is_enabled', true);
+            })
+            ->pluck('users.id')
+            ->map(fn ($i) => (int) $i)
+            ->all();
+    }
+
+    // 3) Normalize (do NOT remove creator)
+    $ids = array_values(array_unique($ids));
+
+    if (empty($ids)) {
+        return $ids;
+    }
+
+    // 4) Exclude any Company Admins (role, company_admin perm, or is_admin)
+    $adminIds = \App\Models\User::whereIn('id', $ids)
+        ->where(function ($q) use ($req) {
+            $q->whereHas('companyMembers', function ($m) use ($req) {
+                $m->where('company_id', $req->company_id)
+                  ->where('is_active', true)
+                  ->whereIn('role_label', ['CompanyAdmin','company_admin','admin','owner']);
+            })
+            ->orWhereHas('permissions', function ($p) {
+                $p->where('permissions.name', 'company_admin')
+                  ->where('user_permission.is_enabled', true);
+            })
+            ->orWhere('is_admin', true);
+        })
+        ->pluck('id')
+        ->map(fn ($i) => (int) $i)
+        ->all();
+
+    // Creator stays if present (even if creator), only admins are excluded
+    $ids = array_values(array_diff($ids, $adminIds));
+
+    return $ids;
+}
+
 
     public function isCompanyAdminFor(User $user, int $companyId): bool
     {

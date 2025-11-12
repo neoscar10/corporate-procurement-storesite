@@ -100,15 +100,23 @@ $badge = function ($s) {
                                     <div class="fw-semibold">
                                         {{ $row->name }}
                                         <span class="{{ $cls }} ms-1">{{ $txt }}</span>
-                                       
+
                                     </div>
                                     <spa class="text-muted small">{{ $row->email }}</span>
                                 </td>
 
-                                {{-- Wrap inside cell; break long words/URLs; never overflow the card --}}
-                                <td class="text-wrap text-break" style="overflow-wrap:anywhere; white-space:normal;">
-                                    {{ $row->comment ?? '—' }}
+                                {{-- Comment / Reason --}}
+                                <td>
+                                    @if($row->comment)
+                                        <button class="btn btn-soft-primary btn-sm text-light waves-effect waves-light"
+                                            wire:click="openReason({{ $row->approver_id }})">
+                                            <i class="mdi mdi-eye-outline align-middle me-1"></i> View
+                                        </button>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
                                 </td>
+
                             </tr>
                         @endforeach
                     </tbody>
@@ -152,7 +160,7 @@ $badge = function ($s) {
     </x-ui.modal>
 </div>
 
-{{-- JS open/close fallbacks (unchanged) --}}
+{{-- JS open/close fallbacks --}}
 <script>
     window.addEventListener('open-approve-confirm-js', () => {
         const el = document.getElementById('approveConfirm');
@@ -171,3 +179,4 @@ $badge = function ($s) {
         if (el) bootstrap.Modal.getOrCreateInstance(el).hide();
     });
 </script>
+
