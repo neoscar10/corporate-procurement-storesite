@@ -23,7 +23,7 @@
             <div class="card mt-3" wire:key="items-card-{{ $req->id }}-v{{ $version }}">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Items</h5>
-                    @if ($req->stage == 'building' || $req->status == 'rejected')
+                    @if ($req->stage == 'building' || $req->stage == 'rejected')
                         <div class="btn-group">
                             <button class="btn btn-soft-primary waves-effect" wire:click="openItemWizard('product')">
                                 <i class="mdi mdi-package-variant"></i> Add Product

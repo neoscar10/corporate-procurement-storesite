@@ -44,6 +44,8 @@ class Wizard extends Component
     public ?string $packaging_requirement = null;
     public bool $inspection_required = false;
     public array $technical_specs = [['key'=>'','value'=>'']];
+    public array $existing_files = []; //media files
+    
 
     // Service specs
     public ?string $scope_of_work = null;
@@ -80,60 +82,139 @@ class Wizard extends Component
     /**
      * Resume an existing draft item by id (product or service).
      */
-    #[On('open-item-wizard-resume')]
-    public function resume(int $itemId): void
+   #[On('open-item-wizard-resume')]
+public function resume($payload = null): void
+{
+    $itemId    = is_array($payload) ? (int)($payload['id'] ?? 0) : (is_numeric($payload) ? (int)$payload : 0);
+    $forceStep = is_array($payload) ? (int)($payload['forceStep'] ?? 0) : 0;
+    if ($itemId <= 0) return;
+
+    $item = \App\Models\Procurement\ProcurementItem::with(['productSpec','serviceSpec','attachments'])
+        ->where('procurement_request_id', $this->requestId)
+        ->findOrFail($itemId);
+
+    $this->resetValidation();
+    $this->files = [];
+
+    // --- fill shared fields (keep your existing code here) ---
+    $this->itemId            = $item->id;
+    $this->kind              = $item->kind;
+    $this->name              = (string) $item->name;
+    $this->short_description = $item->short_description;
+    $this->priority          = $item->priority ?? 'low';
+    $this->unit              = $item->unit;
+    $this->quantity          = max(1, (int) ($item->quantity ?? 1));
+    $this->date_required     = optional($item->date_required)->format('Y-m-d');
+    $this->budget_amount     = $item->budget_amount ? (float) $item->budget_amount : null;
+
+    if ($item->kind === 'product') {
+        $ps = $item->productSpec;
+        $this->brand                 = $ps->brand ?? null;
+        $this->model                 = $ps->model ?? null;
+        $this->quality_level         = $ps->quality_level ?? null;
+        $this->packaging_requirement = $ps->packaging_requirement ?? null;
+        $this->inspection_required   = (bool) ($ps->inspection_required ?? false);
+        $this->technical_specs       = $ps && is_array($ps->technical_specs ?? null)
+                                        ? array_values($ps->technical_specs)
+                                        : [['key'=>'','value'=>'']];
+        $this->product_urls          = is_array($ps->product_urls ?? null) && !empty($ps->product_urls)
+                                        ? array_values($ps->product_urls)
+                                        : [''];
+    } else {
+        $ss = $item->serviceSpec;
+        $this->service_budget_mode   = $item->service_budget_mode ?? null;
+        $this->service_payment_type  = $item->service_payment_type ?? null;
+        $this->scope_of_work         = $ss->scope_of_work ?? null;
+        $this->deliverables          = $ss && is_array($ss->deliverables ?? null)
+                                        ? array_values($ss->deliverables)
+                                        : [['milestone'=>'','criteria'=>'','due_date'=>null]];
+        $this->key_personnels        = $ss && is_array($ss->key_personnels ?? null)
+                                        ? array_values($ss->key_personnels)
+                                        : [['role'=>'','count'=>1,'qualification'=>null]];
+    }
+
+    $this->existing_files = $item->attachments->map(function ($f) {
+    $name = $f->original_name ?: basename($f->path ?? '');
+    return [
+        'name'       => $name,
+        'url'        => $f->url ?: \Storage::disk($f->disk ?: 'public')->url($f->path),
+        'size_bytes' => (int)($f->size_bytes ?? 0),
+        'ext'        => strtolower(pathinfo($name, PATHINFO_EXTENSION)),
+    ];
+    })->all();
+
+    // Start at the first stage (your requirement)
+    $this->step = $forceStep > 0 ? $forceStep : 1;
+
+    $this->show = true;
+    $this->dispatch('open-item-wizard-js');
+}
+
+
+
+
+    #[On('open-item-wizard-edit')]
+    public function openEdit(int $itemId, int $startAt = 1): void
     {
-        $item = ProcurementItem::with(['productSpec','serviceSpec', 'attachments'])
-            ->where('procurement_request_id', $this->requestId) // scope to this request
+        $this->resetErrorBag();
+
+        $item = ProcurementItem::with(['productSpec','serviceSpec','attachments'])
+            ->where('procurement_request_id', $this->requestId)
             ->findOrFail($itemId);
 
-        // Fill shared fields
-        $this->itemId           = $item->id;
-        $this->kind             = $item->kind;
-        $this->name             = (string) $item->name;
-        $this->short_description= $item->short_description;
-        $this->priority         = $item->priority ?? 'low';
-        $this->unit             = $item->unit;
-        $this->quantity         = max(1, (int) ($item->quantity ?? 1));
-        $this->date_required    = optional($item->date_required)->format('Y-m-d');
-        $this->budget_amount    = $item->budget_amount ? (float) $item->budget_amount : null;
+        // Shared fields
+        $this->itemId            = $item->id;
+        $this->kind              = $item->kind;
+        $this->name              = (string)$item->name;
+        $this->short_description = $item->short_description;
+        $this->priority          = $item->priority ?? 'low';
+        $this->unit              = $item->unit;
+        $this->quantity          = max(1, (int)($item->quantity ?? 1));
+        $this->date_required     = optional($item->date_required)->format('Y-m-d');
+        $this->budget_amount     = $item->budget_amount ? (float)$item->budget_amount : null;
+        $this->service_budget_mode  = $item->service_budget_mode ?? null;
+        $this->service_payment_type = $item->service_payment_type ?? null;
 
         if ($item->kind === 'product') {
             $ps = $item->productSpec;
-            $this->brand = $ps->brand ?? null;
+            $this->brand                 = $ps->brand ?? null;
             $this->model                 = $ps->model ?? null;
             $this->quality_level         = $ps->quality_level ?? null;
             $this->packaging_requirement = $ps->packaging_requirement ?? null;
-            $this->inspection_required   = (bool) ($ps->inspection_required ?? false);
+            $this->inspection_required   = (bool)($ps->inspection_required ?? false);
             $this->technical_specs       = $ps && is_array($ps->technical_specs ?? null)
-                                            ? array_values($ps->technical_specs)
-                                            : [['key'=>'','value'=>'']];
-             $this->product_urls = is_array($ps->product_urls ?? null) && !empty($ps->product_urls)
+                ? array_values($ps->technical_specs)
+                : [['key'=>'','value'=>'']];
+            $this->product_urls = is_array($ps->product_urls ?? null) && !empty($ps->product_urls)
                 ? array_values($ps->product_urls)
                 : [''];
-        } else { // service
+        } else {
             $ss = $item->serviceSpec;
-            $this->service_budget_mode   = $item->service_budget_mode ?? null;
-            $this->service_payment_type  = $item->service_payment_type ?? null;
-            $this->scope_of_work         = $ss->scope_of_work ?? null;
-            $this->deliverables          = $ss && is_array($ss->deliverables ?? null)
-                                            ? array_values($ss->deliverables)
-                                            : [['milestone'=>'','criteria'=>'','due_date'=>null]];
-            $this->key_personnels        = $ss && is_array($ss->key_personnels ?? null)
-                                            ? array_values($ss->key_personnels)
-                                            : [['role'=>'','count'=>1,'qualification'=>null]];
+            $this->scope_of_work  = $ss->scope_of_work ?? null;
+            $this->deliverables   = $ss && is_array($ss->deliverables ?? null)
+                ? array_values($ss->deliverables)
+                : [['milestone'=>'','criteria'=>'','due_date'=>null]];
+            $this->key_personnels = $ss && is_array($ss->key_personnels ?? null)
+                ? array_values($ss->key_personnels)
+                : [['role'=>'','count'=>1,'qualification'=>null]];
         }
 
-        // Decide next step: if no spec => step 2, else step 3 (attachments)
-        $hasSpec = $item->kind === 'product'
-            ? (bool) $item->productSpec
-            : (bool) $item->serviceSpec;
+        // Build existing files preview
+        $this->existing_files = $item->attachments->map(function ($f) {
+            $name = $f->original_name ?: basename($f->path ?? '');
+            return [
+                'name'       => $name,
+                'url'        => $f->url ?: \Storage::disk($f->disk ?: 'public')->url($f->path),
+                'size_bytes' => (int)($f->size_bytes ?? 0),
+                'ext'        => strtolower(pathinfo($name, PATHINFO_EXTENSION)),
+            ];
+        })->all();
 
-        $this->step = $hasSpec ? 3 : 2;
-
+        $this->step = max(1, (int)$startAt);
         $this->show = true;
         $this->dispatch('open-item-wizard-js');
     }
+
 
     // func to remove preview files from file upload modal
     public function removeSelectedFile(int $i): void
@@ -171,33 +252,47 @@ class Wizard extends Component
             'service_payment_type'=>['nullable', Rule::in(['per_hour','fixed'])],
         ]);
 
-        // Quantity only for product
         if ($this->kind === 'product') {
-
-            $this->validate([
-                'quantity'=>['required','integer','min:1'],
-            ]);  
+            $this->validate(['quantity'=>['required','integer','min:1']]);
         }
 
+        if ($this->itemId) {
+            // EDIT mode → update core fields + invalidate approvals
+            $item = ProcurementItem::where('procurement_request_id', $this->requestId)
+                ->findOrFail($this->itemId);
 
-        $req = ProcurementRequest::findOrFail($this->requestId);
+            $svc->updateItemCore($item, [
+                'name'              => $this->name,
+                'short_description' => $this->short_description,
+                'priority'          => $this->priority,
+                'unit'              => $this->unit,
+                'quantity'          => $this->kind === 'product' ? ($this->quantity ?: 1) : 1,
+                'date_required'     => $this->date_required,
+                'budget_amount'     => $this->budget_amount,
+                'service_budget_mode'  => $this->service_budget_mode,
+                'service_payment_type' => $this->service_payment_type,
+            ]);
+        } else {
+            // NEW item
+            $req = ProcurementRequest::findOrFail($this->requestId);
+            $item = $svc->addItemDraft($req, [
+                'kind'              => $this->kind,
+                'name'              => $this->name,
+                'short_description' => $this->short_description,
+                'priority'          => $this->priority,
+                'unit'              => $this->unit,
+                'quantity'          => $this->kind === 'product' ? ($this->quantity ?: 1) : 1,
+                'date_required'     => $this->date_required,
+                'budget_amount'     => $this->budget_amount,
+                'service_budget_mode'  => $this->service_budget_mode,
+                'service_payment_type' => $this->service_payment_type,
+            ]);
+            $this->itemId = $item->id;
+        }
 
-        $item = $svc->addItemDraft($req, [
-            'kind'=>$this->kind,
-            'name'=>$this->name,
-            'short_description'=>$this->short_description,
-            'priority'=>$this->priority,
-            'unit'=>$this->unit,
-            'quantity'=> $this->kind === 'product' ? ($this->quantity ?: 1) : 1,
-            'date_required'=>$this->date_required,
-            'budget_amount'=>$this->budget_amount,
-            'service_budget_mode'=>$this->service_budget_mode,
-            'service_payment_type'=>$this->service_payment_type,
-        ]);
-
-        $this->itemId = $item->id;   // <-- persist id (public)
         $this->step = 2;
     }
+
 
     public function saveSpecs(ProcurementRequestService $svc): void
     {

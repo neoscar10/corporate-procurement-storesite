@@ -4,6 +4,8 @@ namespace App\Services\Procurement;
 use App\Models\Procurement\{ProcurementItem,ProcurementRequest};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use App\Services\Procurement\ProcurementRequestService;
 
 class ProcurementItemService
 {
@@ -37,35 +39,36 @@ class ProcurementItemService
 
     public function deleteItem(ProcurementItem $item): void
     {
-        $item->loadMissing(['attachments', 'productSpec', 'serviceSpec']);
+        DB::transaction(function () use ($item) {
+            $item->loadMissing(['attachments', 'productSpec', 'serviceSpec', 'request']);
 
-        // Remove physical files + attachment rows (table has no "id" PK)
-        foreach ($item->attachments as $att) {
-            $disk = $att->disk ?: 'public';
-            $path = $att->path;
-
-            // delete the file if present
-            if ($path && Storage::disk($disk)->exists($path)) {
-                Storage::disk($disk)->delete($path);
+            // delete files + rows
+            foreach ($item->attachments as $att) {
+                $disk = $att->disk ?: 'public';
+                $path = $att->path;
+                if ($path && Storage::disk($disk)->exists($path)) {
+                    Storage::disk($disk)->delete($path);
+                }
+                $item->attachments()
+                    ->where('disk', $disk)
+                    ->where('path', $path)
+                    ->limit(1)
+                    ->delete();
             }
 
-            // delete the DB row via relation (scoped by attachable already)
-            $item->attachments()
-                ->where('disk', $disk)
-                ->where('path', $path)
-                ->limit(1)
-                ->delete();
-        }
+            if ($item->productSpec) $item->productSpec->delete();
+            if ($item->serviceSpec) $item->serviceSpec->delete();
 
-        // Remove specs (if any)
-        if ($item->productSpec) {
-            $item->productSpec->delete();
-        }
-        if ($item->serviceSpec) {
-            $item->serviceSpec->delete();
-        }
+            $req = $item->request; // keep parent before delete
+            $item->delete();
 
-        // Finally, delete the item
-        $item->delete();
+            if ($req) {
+                // (optional) keep items_count truthful if you maintain it
+                if (isset($req->items_count) && $req->items_count > 0) {
+                    $req->decrement('items_count');
+                }
+                app(ProcurementRequestService::class)->invalidateApprovals($req, 'item_deleted');
+            }
+        });
     }
 }

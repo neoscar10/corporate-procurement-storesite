@@ -225,6 +225,59 @@
     {{-- Validation note --}}
     @error('files.*')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
 
+    {{-- Existing attachments (already saved on the item) --}}
+@if(!empty($existing_files))
+  <div class="mt-3">
+    <label class="form-label fw-semibold">Existing attachments</label>
+    <div class="row g-3">
+      @foreach($existing_files as $f)
+        @php
+          $ext   = $f['ext'] ?? '';
+          $isImg = in_array($ext, ['jpg','jpeg','png','gif','webp','bmp'], true);
+          $sizeK = !empty($f['size_bytes']) ? number_format(($f['size_bytes'] / 1024), 1) : null;
+        @endphp
+
+        <div class="col-md-4" wire:key="existing-{{ $loop->index }}">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                @if($isImg)
+                  <img src="{{ $f['url'] }}" alt="file" class="rounded me-3"
+                       style="width:56px;height:56px;object-fit:cover;">
+                @else
+                  <div class="me-3 d-flex align-items-center justify-content-center rounded bg-light"
+                       style="width:56px;height:56px;">
+                    @switch($ext)
+                      @case('pdf')   <i class="mdi mdi-file-pdf-box fs-2 text-danger"></i> @break
+                      @case('doc') @case('docx') <i class="mdi mdi-file-word-box fs-2 text-primary"></i> @break
+                      @case('xls') @case('xlsx') <i class="mdi mdi-file-excel-box fs-2 text-success"></i> @break
+                      @default       <i class="mdi mdi-file-outline fs-2 text-secondary"></i>
+                    @endswitch
+                  </div>
+                @endif
+
+                <div class="flex-grow-1 text-truncate">
+                  <div class="text-truncate small fw-semibold" title="{{ $f['name'] }}">{{ $f['name'] }}</div>
+                  <div class="text-muted small">
+                    {{ strtoupper($ext ?: 'FILE') }}@if($sizeK) • {{ $sizeK }}KB @endif
+                  </div>
+                </div>
+
+                <a href="{{ $f['url'] }}" target="_blank"
+                   class="btn btn-sm btn-light material-shadow-none"
+                   title="Open">
+                  <i class="mdi mdi-eye-outline"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      @endforeach
+    </div>
+  </div>
+@endif
+
+
     {{-- Previews list --}}
     @if(!empty($files))
       <div class="row g-3 mt-3">

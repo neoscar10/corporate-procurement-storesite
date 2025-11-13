@@ -46,11 +46,11 @@ if ($me) {
 
 
 
-    @if($companyStatus === 'pending' && !$readOnlySuccess && $step !== 0)
+    {{-- @if($companyStatus === 'pending' && !$readOnlySuccess && $step !== 0)
         <div class="alert alert-warning mb-4">
             Your company account is yet to be approved, please complete these steps to get approved.
         </div>
-    @endif
+    @endif --}}
 
     <div class="card card-bg-fill">
         <div class="card-body">

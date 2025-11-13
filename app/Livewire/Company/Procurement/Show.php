@@ -144,16 +144,37 @@ class Show extends Component
 
     /** ---------- Top buttons (Details/Budget/Items) ---------- */
 
-    #[On('resume-item')]
-    public function handleResumeItem(int $id): void
-    {
-        if ($id <= 0) return;
+  #[On('resume-item')]
+public function handleResumeItem($payload = null): void
+{
+    $id = is_array($payload)
+        ? (int)($payload['id'] ?? 0)
+        : (is_numeric($payload) ? (int)$payload : 0);
 
-        $this->dispatch('open-item-wizard-resume', $id)
-            ->to('company.procurement.items.wizard');
+    if ($id <= 0) return;
 
-        $this->dispatch('open-item-wizard-js');
-    }
+    // Always pass a single array payload to the child
+    $this->dispatch('open-item-wizard-resume', ['id' => $id, 'forceStep' => 1])
+         ->to('company.procurement.items.wizard');
+
+    $this->dispatch('open-item-wizard-js');
+}
+
+
+
+public function openItemWizard(string $kind = 'product'): void
+{
+    $this->dispatch('open-item-wizard', $kind)
+        ->to('company.procurement.items.wizard');
+
+    // remove the array payload here too
+    $this->dispatch('open-item-wizard-js');
+}
+
+
+
+
+
     public function openReason(int $approverId): void
     {
         $row = $this->req->fresh('approvals')->approvals->firstWhere('approver_id', $approverId);
@@ -182,13 +203,13 @@ class Show extends Component
         $this->dispatch('open-edit-budget-js');
     }
 
-    public function openItemWizard(string $kind = 'product'): void
-    {
-        $this->dispatch('open-item-wizard', $kind)
-            ->to('company.procurement.items.wizard');
+    // public function openItemWizard(string $kind = 'product'): void
+    // {
+    //     $this->dispatch('open-item-wizard', $kind)
+    //         ->to('company.procurement.items.wizard');
 
-        $this->dispatch('open-item-wizard-js', ['kind' => $kind]);
-    }
+    //     $this->dispatch('open-item-wizard-js', ['kind' => $kind]);
+    // }
 
     /** ---------- Approvals actions (merged here) ---------- */
 

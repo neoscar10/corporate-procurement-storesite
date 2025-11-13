@@ -94,6 +94,17 @@ class Table extends Component
         if ($raw instanceof \UnitEnum)   return strtolower($raw->name);
         return strtolower((string)$raw);
     }
+    public function openEdit(int $id): void
+    {
+        if ($id <= 0) return;
+
+        // Send ONE array payload to the Wizard + open the modal
+        $this->dispatch('open-item-wizard-resume', ['id' => $id, 'forceStep' => 1])
+            ->to('company.procurement.items.wizard');
+
+        $this->dispatch('open-item-wizard-js');
+    }
+
 
     public function render()
     {

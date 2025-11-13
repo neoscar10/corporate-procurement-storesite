@@ -22,7 +22,7 @@ class Index extends Component
     {
         $q = ProcurementRequest::query()
             ->withCount(['items'])
-            ->where('status', 'published'); // handle enum-backed too at DB level
+            ; // handle enum-backed too at DB level
 
         if ($this->search !== '') {
             $s = '%'.$this->search.'%';

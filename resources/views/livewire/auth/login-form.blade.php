@@ -13,7 +13,8 @@
     
         <div class="mb-2">
             <x-forms.input label="Password" name="password" type="password" wire:model.defer="password" required
-                placeholder="••••••••" />
+                placeholder="••••••••" :toggle="true" />
+
         </div>
     
         <div class="d-flex justify-content-between align-items-center mb-3">

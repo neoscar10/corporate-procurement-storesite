@@ -6,6 +6,7 @@
   'help' => null,
   'icon' => null,
   'placeholder' => null,
+  'toggle' => false,   // enable eye toggle for password fields
 ])
 
 @php
@@ -15,18 +16,65 @@
     if ($attributes->has($k)) { $wireField = $attributes->get($k); break; }
   }
   $field = $name ?? $wireField;
+
+  // Stable ID for the input (needed for the toggle JS)
+  $id = $attributes->get('id') ?? ($field ? str_replace(['.', '[', ']'], '_', $field) . '_input' : 'input_'.uniqid());
 @endphp
 
 @if($label)
-  <label class="form-label">
+  <label class="form-label" for="{{ $id }}">
     {{ $label }} @if($required)<span class="text-danger">*</span>@endif
   </label>
 @endif
 
-@if($icon)
+{{-- Password with seamless eye toggle (no button hover bg) --}}
+@if($type === 'password' && $toggle)
+  <div class="input-group">
+    @if($icon)
+      <span class="input-group-text"><i class="{{ $icon }}"></i></span>
+    @endif
+
+    <input
+      id="{{ $id }}"
+      {{ $attributes->merge([
+        'class' => 'form-control',
+        'type' => 'password',
+        'name' => $field,
+        'placeholder' => $placeholder,
+        $required ? 'required' : null => true,
+      ]) }}
+    >
+
+    {{-- Use input-group-text so it visually matches the input --}}
+    <span
+      class="input-group-text bg-transparent"
+      style="cursor:pointer; user-select:none"
+      aria-label="Toggle password visibility"
+      title="Show/Hide password"
+      onclick="(function(el){
+        var i = el.querySelector('i');
+        var input = document.getElementById('{{ $id }}');
+        if(!input) return;
+        if(input.type === 'password'){
+          input.type = 'text';
+          i.classList.remove('mdi-eye-off-outline');
+          i.classList.add('mdi-eye-outline');
+        } else {
+          input.type = 'password';
+          i.classList.remove('mdi-eye-outline');
+          i.classList.add('mdi-eye-off-outline');
+        }
+      })(this)"
+    >
+      <i class="mdi mdi-eye-off-outline"></i>
+    </span>
+  </div>
+
+{{-- Non-toggle variants (with/without left icon) --}}
+@elseif($icon)
   <div class="input-group">
     <span class="input-group-text"><i class="{{ $icon }}"></i></span>
-    <input {{ $attributes->merge([
+    <input id="{{ $id }}" {{ $attributes->merge([
       'class' => 'form-control',
       'type' => $type,
       'name' => $field,
@@ -35,7 +83,7 @@
     ]) }}>
   </div>
 @else
-  <input {{ $attributes->merge([
+  <input id="{{ $id }}" {{ $attributes->merge([
     'class' => 'form-control',
     'type' => $type,
     'name' => $field,

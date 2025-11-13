@@ -71,6 +71,7 @@ class ProcurementRequestService
             ]);
 
             $req->increment('items_count');
+            $this->invalidateApprovals($req, 'item_added');
             return $item;
         });
     }
@@ -110,6 +111,7 @@ class ProcurementRequestService
             );
         }
 
+        $this->invalidateApprovals($item->request, 'item_specs_updated');
         $item->update(['spec_completed_at'=>now()]);
     }
 
@@ -383,5 +385,49 @@ class ProcurementRequestService
 
         return $viaRole || $viaPerm || (bool) ($user->is_admin ?? false);
     }
+
+    // Helper
+    public function invalidateApprovals(ProcurementRequest $req, string $reason = 'item_changed'): void
+    {
+        DB::transaction(function () use ($req) {
+            // reset all approval rows to pending
+            $req->approvals()->update([
+                'status'      => 'pending',
+                'approved_at' => null,
+                'rejected_at' => null,
+                'comment'     => null,
+            ]);
+
+            // roll request back to initial state
+            $req->forceFill([
+                'status'       => RequestStatus::DRAFT,
+                'stage'        => 'building',
+                'approved_at'  => null,
+                'published_at' => null,
+            ])->save();
+        });
+    }
+
+    public function updateItemCore(\App\Models\Procurement\ProcurementItem $item, array $data): void
+    {
+        DB::transaction(function () use ($item, $data) {
+            $item->fill([
+                'name'                 => $data['name'] ?? $item->name,
+                'short_description'    => $data['short_description'] ?? $item->short_description,
+                'priority'             => $data['priority'] ?? $item->priority,
+                'unit'                 => $data['unit'] ?? $item->unit,
+                'quantity'             => $data['quantity'] ?? $item->quantity,
+                'date_required'        => $data['date_required'] ?? $item->date_required,
+                'budget_amount'        => $data['budget_amount'] ?? $item->budget_amount,
+                'service_budget_mode'  => $data['service_budget_mode'] ?? $item->service_budget_mode,
+                'service_payment_type' => $data['service_payment_type'] ?? $item->service_payment_type,
+            ])->save();
+
+            // reset approvals + request state
+            $this->invalidateApprovals($item->request, 'item_core_updated');
+        });
+    }
+
+
 
 }
