@@ -12,13 +12,14 @@ use App\Livewire\Company\Dashboards\AdminDashboard;
 use App\Services\Auth\WebAuthService;
 use App\Livewire\Admin\Companies\Requests\Index as CompanyRequestsIndex;
 use App\Livewire\Admin\Companies\Requests\Show as CompanyRequestsShow;
+use App\Livewire\Admin\Procurement\Show  as AdminProcureShow;
 use App\Livewire\Admin\Dashbaord\AdminDashboard as DashbaordAdminDashboard;
 use App\Livewire\Company\Dashboards\UserDashboard as userDashboard;
 use App\Livewire\Company\Procurement\Index as CompanyProcIndex;
 use App\Livewire\Company\Procurement\Show as CompanyProcureShow;
 use App\Livewire\Company\Procurement\Items\Show as ItemShow;
 use App\Livewire\Admin\Procurement\Index as SaProcureIndex;
-
+use App\Livewire\Admin\Procurement\ItemShow as AdminItemShow;
 
 
 
@@ -64,10 +65,18 @@ Route::middleware(['auth'])->prefix('admin/companies')->name('admin.company.')->
 
 });
 
+Route::get('admin/procure/requests/{id}',    AdminProcureShow::class)->name('admin.procure.requests.show');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/super-admin/procure/requests', SaProcureIndex::class)
         ->name('superadmin.procure.requests.index');
 });
 
+Route::middleware(['auth'])->prefix('super-admin/procure/requests')->name('admin.procure.requests.')->group(function () {
+    Route::get('{request}/items/{item}', AdminItemShow::class)->name('items.show');
+});
+
 Route::get('/super-admin/dashboard', \App\Livewire\Admin\Dashbaord\AdminDashboard::class)->name('admin.dashboard');
+
+// END OF SUPER ADMIN ROUTES.....TO BE ARRANGES AND UNIFIED
 

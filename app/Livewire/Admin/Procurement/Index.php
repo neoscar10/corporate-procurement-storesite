@@ -4,8 +4,7 @@ namespace App\Livewire\Admin\Procurement;
 
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\Procurement\ProcurementRequest;
-
+use App\Services\Admin\ProcurementService;
 
 class Index extends Component
 {
@@ -13,30 +12,22 @@ class Index extends Component
 
     public string $search = '';
     public int $perPage = 15;
+    public ?string $status = 'published'; // default to published for SA
 
-    // Reset pagination when filters change
     public function updatingSearch()  { $this->resetPage(); }
     public function updatingPerPage() { $this->resetPage(); }
+    public function updatingStatus()  { $this->resetPage(); }
 
-    public function render()
+    public function render(ProcurementService $svc)
     {
-        $q = ProcurementRequest::query()
-            ->withCount(['items'])
-            ; // handle enum-backed too at DB level
-
-        if ($this->search !== '') {
-            $s = '%'.$this->search.'%';
-            $q->where(function ($qq) use ($s) {
-                $qq->where('title', 'like', $s)
-                   ->orWhere('id', 'like', $s);
-            });
-        }
-
-        $rows = $q->orderByDesc('id')->paginate($this->perPage);
+        $rows = $svc->listRequests([
+            'search' => $this->search,
+            'status' => $this->status ?: null,
+        ], $this->perPage);
 
         return view('livewire.admin.procurement.index', compact('rows'))
             ->layout('layouts.admin', [
-                'title' => 'Super Admin • Published Requests | '.config('app.name'),
+                'title' => 'Super Admin • Procurement Requests | '.config('app.name'),
             ]);
     }
 }

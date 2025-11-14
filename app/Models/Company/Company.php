@@ -4,6 +4,7 @@ namespace App\Models\Company;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Company extends Model
 {
@@ -24,6 +25,12 @@ class Company extends Model
         'status_changed_at' => 'datetime',
         'resubmission_count' => 'integer',
     ];
+
+     // Prefer brand_name, fall back to legal_name
+    public function name(): Attribute
+    {
+        return Attribute::get(fn () => $this->brand_name ?: $this->legal_name);
+    }
 
     public function onboardingProgress()
     {

@@ -25,40 +25,40 @@
             <div id="two-column-menu"></div>
 
             @php
-                use Illuminate\Support\Facades\Auth;
-                use Illuminate\Support\Facades\Route;
-                use App\Models\Company\CompanyMember;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use App\Models\Company\CompanyMember;
 
-                $user = Auth::user();
-                $isAdmin = $user && (int) ($user->is_admin ?? 0) === 1;
+$user = Auth::user();
+$isAdmin = $user && (int) ($user->is_admin ?? 0) === 1;
 
-                // Latest active membership (if any)
-                $membership = $user
-                    ? CompanyMember::with('company')->where('user_id', $user->id)->where('is_active', true)->latest('id')->first()
-                    : null;
+// Latest active membership (if any)
+$membership = $user
+    ? CompanyMember::with('company')->where('user_id', $user->id)->where('is_active', true)->latest('id')->first()
+    : null;
 
-                $company = optional($membership)->company;
-                $companyStatus = $company->status ?? null;
-                $showOnboarding = $companyStatus === 'pending';
+$company = optional($membership)->company;
+$companyStatus = $company->status ?? null;
+$showOnboarding = $companyStatus === 'pending';
 
-                // Route helpers + active states
-                $active = fn(string $pattern) => request()->routeIs($pattern) ? 'active' : '';
+// Route helpers + active states
+$active = fn(string $pattern) => request()->routeIs($pattern) ? 'active' : '';
 
-                $adminDashboardHref = Route::has('admin.dashboard') ? route('admin.dashboard') : '#';
-                $adminRequestsHref = Route::has('admin.company.requests.index') ? route('admin.company.requests.index') : '#';
-                $companyOnboardingHref = Route::has('company.onboarding') ? route('company.onboarding') : '#';
-                $companyAdminDashHref = Route::has('company.admin.dashboard') ? route('company.admin.dashboard') : '#';
-                $companyUserDashHref = Route::has('company.user.dashboard') ? route('company.user.dashboard') : '#';
+$adminDashboardHref = Route::has('admin.dashboard') ? route('admin.dashboard') : '#';
+$adminRequestsHref = Route::has('admin.company.requests.index') ? route('admin.company.requests.index') : '#';
+$companyOnboardingHref = Route::has('company.onboarding') ? route('company.onboarding') : '#';
+$companyAdminDashHref = Route::has('company.admin.dashboard') ? route('company.admin.dashboard') : '#';
+$companyUserDashHref = Route::has('company.user.dashboard') ? route('company.user.dashboard') : '#';
 
-                // Company procurements route (handles earlier typo)
-                $companyProcHref = Route::has('comapany.procurements')
-                    ? route('comapany.procurements')
-                    : (Route::has('company.procurements') ? route('company.procurements') : '#');
+// Company procurements route (handles earlier typo)
+$companyProcHref = Route::has('comapany.procurements')
+    ? route('comapany.procurements')
+    : (Route::has('company.procurements') ? route('company.procurements') : '#');
 
-                // Super Admin • Published Requests
-                $saPublishedHref = Route::has('superadmin.procure.requests.index')
-                    ? route('superadmin.procure.requests.index')
-                    : '#';
+// Super Admin • Published Requests
+$saPublishedHref = Route::has('superadmin.procure.requests.index')
+    ? route('superadmin.procure.requests.index')
+    : '#';
             @endphp
 
             <ul class="navbar-nav" id="navbar-nav">
@@ -104,6 +104,7 @@
                             <span>Admin Dashboard</span>
                         </a>
                     </li>
+
 
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $active('admin.company.requests.*') }}"
