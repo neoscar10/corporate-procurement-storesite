@@ -31,13 +31,14 @@
                 @error('priority')<div class="text-danger small">{{ $message }}</div>@enderror
             </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Unit</label>
-                <input type="text" class="form-control" wire:model.defer="unit" placeholder="e.g., pcs, hr">
-                @error('unit')<div class="text-danger small">{{ $message }}</div>@enderror
-            </div>
+           
 
             @if($kind === 'product')
+              <div class="col-md-3">
+                  <label class="form-label">Unit</label>
+                  <input type="text" class="form-control" wire:model.defer="unit" placeholder="e.g., pcs, hr">
+                  @error('unit')<div class="text-danger small">{{ $message }}</div>@enderror
+              </div>
                 <div class="col-md-3">
                     <label class="form-label">Quantity</label>
                     <input type="number" min="1" step="1" class="form-control" wire:model.defer="quantity">
@@ -62,7 +63,7 @@
             </div>
 
             @if($isService)
-                <div class="col-md-3">
+                {{-- <div class="col-md-3">
                     <label class="form-label">Budget Mode</label>
                     <select class="form-select" wire:model.defer="service_budget_mode">
                         <option value="">—</option>
@@ -70,7 +71,7 @@
                         <option value="fixed">Fixed</option>
                     </select>
                     @error('service_budget_mode')<div class="text-danger small">{{ $message }}</div>@enderror
-                </div>
+                </div> --}}
 
                 <div class="col-md-3">
                     <label class="form-label">Payment Type</label>
