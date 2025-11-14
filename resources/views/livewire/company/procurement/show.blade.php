@@ -14,6 +14,9 @@
             </button>
         </x-slot:actions>
     </x-ui.page-header>
+    @include('livewire.company.procurement.components.req-status-display')
+
+
 
     <div class="row">
         <div class="col-md-8">

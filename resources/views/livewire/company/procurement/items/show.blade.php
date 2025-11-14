@@ -13,6 +13,7 @@ $kind = ucfirst($item->kind ?? 'Item');
         </x-slot:actions>
     </x-ui.page-header>
 
+    
 
     <div class="row">
         

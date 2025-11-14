@@ -9,6 +9,10 @@ use App\Models\Procurement\ProcurementRequest;
 use App\Models\Company\CompanyMember;
 use App\Models\User;
 use App\Services\Procurement\ProcurementRequestService as PRService;
+use App\Services\Onboarding\OnboardingProgressService; 
+use App\Models\Company\Company;                       
+use Illuminate\Support\Str;                           
+
 
 class Show extends Component
 {
@@ -26,6 +30,9 @@ class Show extends Component
    public bool $viewReasonOpen = false;
     public string $viewReasonText = '';
     public ?int $viewReasonBy = null;
+    public bool $companyStatusModalOpen = false;
+    public string $companyStatusMessage = '';
+    public bool $companyNeedsOnboarding = false;
 
     protected $listeners = [
         'request-updated'   => 'onRequestUpdated',
@@ -296,6 +303,110 @@ public function openItemWizard(string $kind = 'product'): void
         $this->dispatch('lw:refresh-all');
         $this->dispatch('request-updated');
     }
+   public function attemptPublish(PRService $svc): void
+{
+    ['isApproved' => $isApproved, 'onboardingOk' => $onboardingOk, 'currentStep' => $step] = $this->companyGate();
+
+    if ($isApproved) {
+        $this->publish($svc);
+        return;
+    }
+
+    if ($onboardingOk) {
+        // Pending but onboarding complete
+        $this->companyNeedsOnboarding = false;
+        $this->companyStatusMessage = "Your company is pending. You’ll be notified when approved and can immediately publish this request.";
+    } else {
+        // Pending and onboarding NOT complete — show a step-specific hint
+        $this->companyNeedsOnboarding = true;
+        $this->companyStatusMessage = match ($step) {
+            1 => "Your company is pending and onboarding isn’t complete. Next: add your company addresses.",
+            2 => "Your company is pending and onboarding isn’t complete. Next: complete company contact details.",
+            3 => "Your company is pending and onboarding isn’t complete. Next: set procurement preferences.",
+            4 => "Your company is pending and onboarding isn’t complete. Next: upload KYC documents.",
+            5 => "Your company is pending and onboarding isn’t complete. Next: add billing information.",
+            default => "Your company is pending and your onboarding is not complete. Please complete onboarding; you’ll be notified when approved and can then publish.",
+        };
+    }
+
+    $this->companyStatusModalOpen = true;
+    $this->dispatch('open-company-status-modal');
+}
+
+public function attemptPublishNow(PRService $svc): void
+{
+    ['isApproved' => $isApproved, 'onboardingOk' => $onboardingOk, 'currentStep' => $step] = $this->companyGate();
+
+    if ($isApproved) {
+        $this->publishNow($svc);
+        return;
+    }
+
+    if ($onboardingOk) {
+        $this->companyNeedsOnboarding = false;
+        $this->companyStatusMessage = "Your company is pending. You’ll be notified when approved and can immediately publish this request.";
+    } else {
+        $this->companyNeedsOnboarding = true;
+        $this->companyStatusMessage = match ($step) {
+            1 => "Your company is pending and onboarding isn’t complete. Next: add your company addresses.",
+            2 => "Your company is pending and onboarding isn’t complete. Next: complete company contact details.",
+            3 => "Your company is pending and onboarding isn’t complete. Next: set procurement preferences.",
+            4 => "Your company is pending and onboarding isn’t complete. Next: upload KYC documents.",
+            5 => "Your company is pending and onboarding isn’t complete. Next: add billing information.",
+            default => "Your company is pending and your onboarding is not complete. Please complete onboarding; you’ll be notified when approved and can then publish.",
+        };
+    }
+
+    $this->companyStatusModalOpen = true;
+    $this->dispatch('open-company-status-modal');
+}
+
+
+
+    // helper
+    private function loadCompanyMeta(): array
+    {
+        $userId = Auth::id();
+        $companyId = CompanyMember::where('user_id', $userId)
+            ->where('is_active', true)
+            ->value('company_id');
+
+        /** @var \App\Models\Company\Company|null $company */
+        $company = Company::with('onboardingProgress')->find($companyId);
+
+        $status = strtolower((string)($company->status ?? 'pending'));
+
+        // If your progress model uses a different flag, adjust here.
+        $complete = (bool) optional($company->onboardingProgress)->is_complete;
+
+        return [$status, $complete];
+    }
+    private function companyGate(): array
+{
+    $userId = Auth::id();
+    $companyId = CompanyMember::where('user_id', $userId)
+        ->where('is_active', true)
+        ->value('company_id');
+
+    /** @var Company $company */
+    $company = Company::with('onboardingProgress')->findOrFail($companyId);
+
+    // Normalize status (enum|string|null)
+    $raw = $company->status;
+    $statusStr = is_string($raw)
+        ? Str::lower($raw)
+        : (method_exists($raw, 'value') ? Str::lower($raw->value) : Str::lower((string) $raw));
+
+    $isApproved = ($statusStr === 'approved');
+
+    /** @var OnboardingProgressService $svc */
+    $svc = app(OnboardingProgressService::class);
+    $onboardingOk = $svc->isComplete($company);
+    $currentStep  = $svc->currentStep($company); // 1..6 (6=complete)
+
+    return compact('isApproved', 'onboardingOk', 'companyId', 'currentStep');
+}
+
 
     public function publishNow(PRService $svc): void
     {

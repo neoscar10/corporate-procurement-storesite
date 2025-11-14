@@ -18,7 +18,7 @@
     
             <tbody>
                 @forelse($items as $it)
-                                                    @php
+                                                                    @php
                     // Normalize enum|string status safely
                     $raw = $it->status ?? 'draft';
                     $statusraw = $raw instanceof \BackedEnum ? strtolower($raw->value)
@@ -42,7 +42,7 @@
                 @endphp
 
                 <tr>
-                    <th scope="row">{{ $it->id }}</th>
+                    <th scope="row">{{ $loop->iteration }}</th>
                     <td class="text-capitalize">{{ $it->kind }}</td>
                     <td class="text-truncate" style="max-width: 260px;" title="{{ $it->name }}">
                         <a class="text-decoration-underline"

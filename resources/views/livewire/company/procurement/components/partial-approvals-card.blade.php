@@ -1,5 +1,5 @@
 {{-- Approvals card (inlined, no child component) --}}
-        <div class="card" wire:key="approvals-card-{{ $req->id }}">
+        <div class="card mt-3" wire:key="approvals-card-{{ $req->id }}">
             <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <h5 class="mb-0 me-2">Approvals</h5>
         
@@ -14,12 +14,13 @@ $meIsPending = $hasApprovalRows && $meRow
                 <div class="d-flex gap-2 flex-wrap ms-auto">
                     {{-- Company Admin can publish at any time --}}
                     @if($canPublishNow && $status !== 'published' && $req->items->count() > 0)
+                        {{-- Fast-track publish (Company Admin) --}}
                         <button type="button" class="btn btn-success btn-sm text-light waves-effect waves-light text-nowrap"
-                            wire:click="publishNow" wire:loading.attr="disabled" wire:target="publishNow">
-                            <span wire:loading.remove wire:target="publishNow">
+                            wire:click="attemptPublishNow" wire:loading.attr="disabled" wire:target="attemptPublishNow">
+                            <span wire:loading.remove wire:target="attemptPublishNow">
                                 <i class="mdi mdi-check-decagram"></i> Publish
                             </span>
-                            <span wire:loading wire:target="publishNow">
+                            <span wire:loading wire:target="attemptPublishNow">
                                 <x-ui.spinner size="sm" text="Publishing..." />
                             </span>
                         </button>
@@ -40,12 +41,13 @@ $meIsPending = $hasApprovalRows && $meRow
         
                     {{-- Creator-only: normal publish after approvals fulfilled --}}
                     @if($canPublish)
+                        {{-- Normal publish (creator after approvals) --}}
                         <button type="button" class="btn btn-primary btn-sm text-light waves-effect waves-light text-nowrap"
-                            wire:click="publish" wire:loading.attr="disabled" wire:target="publish">
-                            <span wire:loading.remove wire:target="publish">
+                            wire:click="attemptPublish" wire:loading.attr="disabled" wire:target="attemptPublish">
+                            <span wire:loading.remove wire:target="attemptPublish">
                                 <i class="mdi mdi-send-check-outline"></i> Publish
                             </span>
-                            <span wire:loading wire:target="publish">
+                            <span wire:loading wire:target="attemptPublish">
                                 <x-ui.spinner size="sm" text="Publishing..." />
                             </span>
                         </button>
@@ -166,16 +168,16 @@ $meIsPending = $hasApprovalRows && $meRow
                 </x-slot:title>
             
                 @php
-                    $row = $req->approvals->firstWhere('approver_id', $viewReasonBy);
-                    $status = strtolower($row->status ?? '');
-                    [$badgeCls, $badgeTxt] = match ($status) {
-                        'approved' => ['badge bg-success-subtle text-success', 'APPROVED'],
-                        'rejected' => ['badge bg-danger-subtle text-danger', 'REJECTED'],
-                        'pending' => ['badge bg-secondary-subtle text-secondary', 'PENDING'],
-                        default => ['badge bg-secondary-subtle text-secondary', strtoupper($status ?: 'PENDING')],
-                    };
-                    $when = $row?->approved_at ?: $row?->rejected_at;
-                    $whenStr = $when ? \Carbon\Carbon::parse($when)->format('F j, Y • g:i A') : '—';
+$row = $req->approvals->firstWhere('approver_id', $viewReasonBy);
+$status = strtolower($row->status ?? '');
+[$badgeCls, $badgeTxt] = match ($status) {
+    'approved' => ['badge bg-success-subtle text-success', 'APPROVED'],
+    'rejected' => ['badge bg-danger-subtle text-danger', 'REJECTED'],
+    'pending' => ['badge bg-secondary-subtle text-secondary', 'PENDING'],
+    default => ['badge bg-secondary-subtle text-secondary', strtoupper($status ?: 'PENDING')],
+};
+$when = $row?->approved_at ?: $row?->rejected_at;
+$whenStr = $when ? \Carbon\Carbon::parse($when)->format('F j, Y • g:i A') : '—';
                 @endphp
             
                 <div class="mb-3 d-flex align-items-start gap-3">
@@ -209,7 +211,36 @@ $meIsPending = $hasApprovalRows && $meRow
                 </x-slot:footer>
             </x-ui.modal>
 
-
+            {{-- COnditional message modal for publishing --}}
+            <x-ui.modal id="companyStatusModal-{{ $req->id }}" wire:model.live="companyStatusModalOpen" size="md"
+                wire:key="company-status-modal-{{ $req->id }}" wire:ignore.self>
+                <x-slot:title>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="mdi mdi-domain text-primary fs-5"></i>
+                        <span>Publishing Blocked</span>
+                    </div>
+                </x-slot:title>
+            
+                <div class="mb-2">
+                    {{ $companyStatusMessage }}
+                </div>
+            
+                <x-slot:footer>
+                    <button type="button" class="btn btn-light material-shadow-none"
+                        wire:click="$set('companyStatusModalOpen', false)">
+                        Close
+                    </button>
+            
+                    @if($companyNeedsOnboarding)
+                        <a href="{{ route('company.onboarding') }}" class="btn btn-primary text-light waves-effect waves-light">
+                            Go to Onboarding
+                        </a>
+                    @endif
+                </x-slot:footer>
+            </x-ui.modal>
+            
+            {{-- anchor to safely pass the modal id to JS without Blade inside the script --}}
+            <div id="companyStatusModalAnchor-{{ $req->id }}" data-modal-id="companyStatusModal-{{ $req->id }}"></div>
 
             {{-- Force-open Approvals confirm via browser events (same pattern as Items) --}}
             <script>
@@ -244,6 +275,38 @@ $meIsPending = $hasApprovalRows && $meRow
                     }
                 });
             </script>
+            
+            @push('scripts')
+<script>
+(function () {
+  // read the id from the nearby anchor to avoid Blade in JS
+  const anchor = document.getElementById('companyStatusModalAnchor-{{ $req->id }}');
+  const modalId = anchor ? anchor.dataset.modalId : 'companyStatusModal-{{ $req->id }}';
+
+  window.addEventListener('open-company-status-modal', () => {
+    const el = document.getElementById(modalId);
+    if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+  });
+
+  window.addEventListener('close-company-status-modal', () => {
+    const el = document.getElementById(modalId);
+    if (el) bootstrap.Modal.getOrCreateInstance(el).hide();
+  });
+
+  // keep Livewire boolean in sync if user closes via X/ESC/backdrop
+  document.addEventListener('hidden.bs.modal', (e) => {
+    if (e.target && e.target.id === modalId) {
+      const root = e.target.closest('[wire\\:id]');
+      const comp = root ? window.Livewire?.find(root.getAttribute('wire:id')) : null;
+      if (comp) comp.set('companyStatusModalOpen', false);
+    }
+  });
+})();
+</script>
+@endpush
+
+
+
 
 
 
