@@ -59,6 +59,14 @@ $companyProcHref = Route::has('comapany.procurements')
 $saPublishedHref = Route::has('superadmin.procure.requests.index')
     ? route('superadmin.procure.requests.index')
     : '#';
+$vendorCatsHref = Route::has('admin.vendor.categories.index')
+    ? route('admin.vendor.categories.index')
+    : (Route::has('admin.vendor.categories')
+        ? route('admin.vendor.categories')
+        : (Route::has('superadmin.vendor.categories.index')
+            ? route('superadmin.vendor.categories.index')
+            : '#'));
+$adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.index') : '#';
             @endphp
 
             <ul class="navbar-nav" id="navbar-nav">
@@ -122,6 +130,25 @@ $saPublishedHref = Route::has('superadmin.procure.requests.index')
                             <span>Procurement Requests</span>
                         </a>
                     </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link menu-link
+                                   {{ $active('admin.vendor.categories') }}
+                                   {{ $active('admin.vendor.categories.*') }}
+                                   {{ $active('superadmin.vendor.categories.*') }}" href="{{ $vendorCatsHref }}">
+                            <i class="mdi mdi-tag-multiple-outline"></i>
+                            <span>Vendor Categories</span>
+                        </a>
+                    </li>
+
+                    {{-- // under Admin section: --}}
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $active('admin.vendors.index') }}" href="{{ $adminVendorsHref }}">
+                            <i class="mdi mdi-account-multiple-outline"></i>
+                            <span>Vendors</span>
+                        </a>
+                    </li>
+
                 @endif
             </ul>
         </div>

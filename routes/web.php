@@ -20,6 +20,8 @@ use App\Livewire\Company\Procurement\Show as CompanyProcureShow;
 use App\Livewire\Company\Procurement\Items\Show as ItemShow;
 use App\Livewire\Admin\Procurement\Index as SaProcureIndex;
 use App\Livewire\Admin\Procurement\ItemShow as AdminItemShow;
+use App\Livewire\Admin\VendorCategories\Index as VendorCategoriesIndex;
+use App\Livewire\Admin\Vendors\Index as VendorsIndex;
 
 
 
@@ -74,6 +76,17 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth'])->prefix('super-admin/procure/requests')->name('admin.procure.requests.')->group(function () {
     Route::get('{request}/items/{item}', AdminItemShow::class)->name('items.show');
+});
+
+Route::middleware(['auth']) 
+    ->prefix('super-admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/vendor-categories', VendorCategoriesIndex::class)->name('vendor.categories');
+    });
+    
+Route::middleware(['web','auth'])->group(function () {
+    Route::get('/admin/vendors', VendorsIndex::class)->name('admin.vendors.index');
 });
 
 Route::get('/super-admin/dashboard', \App\Livewire\Admin\Dashbaord\AdminDashboard::class)->name('admin.dashboard');

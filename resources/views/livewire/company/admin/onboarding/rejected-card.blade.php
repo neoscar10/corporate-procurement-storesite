@@ -4,14 +4,16 @@
     </div>
     <h5 class="mb-2">Onboarding rejected</h5>
     <p class="text-muted mb-3">
-        Your company onboarding was not approved.
+        Your company onboarding was not approved..
     </p>
 
-    @if($reason)
+    @if(filled($reason))
         <div class="alert alert-danger border-0">
-            <strong>Reason:</strong> {{ $reason }}
+            <strong>Reason:</strong>
+            {!! nl2br(e($reason)) !!}
         </div>
     @endif
+
 
     <div class="d-flex justify-content-center gap-2">
         <button class="btn btn-primary text-light waves-effect waves-light" wire:click="resubmit">

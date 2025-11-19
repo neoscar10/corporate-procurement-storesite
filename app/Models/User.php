@@ -42,6 +42,7 @@ class User extends Authenticatable implements JWTSubject
         'is_active'                => 'boolean',
         'two_factor_enabled'       => 'boolean',
         'password'                 => 'hashed',
+        'is_vendor' => 'boolean',
     ];
 
     // roles/permissions
@@ -132,5 +133,9 @@ class User extends Authenticatable implements JWTSubject
                 }
             }
         });
+    }
+    public function vendor()
+    {
+        return $this->hasOne(\App\Models\Vendor\Vendor::class);
     }
 }
