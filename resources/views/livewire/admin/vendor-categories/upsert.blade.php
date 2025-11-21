@@ -25,11 +25,11 @@
             @error('slug')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
         </div>
 
-        <div class="col-md-3">
+        {{-- <div class="col-md-3">
             <label class="form-label">Order</label>
             <input type="number" class="form-control" wire:model.defer="display_order" min="0">
             @error('display_order')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-        </div>
+        </div> --}}
 
         <div class="col-md-3 d-flex align-items-end">
             <div class="form-check form-switch">

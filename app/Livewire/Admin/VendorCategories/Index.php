@@ -4,17 +4,19 @@ namespace App\Livewire\Admin\VendorCategories;
 
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\On;
 use App\Services\Admin\VendorCategoryService;
+use Illuminate\Database\Eloquent\Builder;
 
 class Index extends Component
 {
     use WithPagination;
 
-    public string $kind = 'product'; // product | service
-    public string $search = '';
-    public string $active = '';      // '' | '1' | '0'
-    public int $perPage = 15;
+    protected $paginationTheme = 'bootstrap';
+
+    public string $kind    = 'product'; // product | service
+    public string $search  = '';
+    public string $active  = '';        // '' | '1' | '0'
+    public int    $perPage = 15;
 
     public ?int $deleteId = null;
 
@@ -22,10 +24,22 @@ class Index extends Component
         'vc:refresh' => '$refresh',
     ];
 
-    public function updatingKind()     { $this->resetPage(); }
-    public function updatingSearch()   { $this->resetPage(); }
-    public function updatingActive()   { $this->resetPage(); }
-    public function updatingPerPage()  { $this->resetPage(); }
+    // Keep state in URL (similar to Company Requests)
+    protected $queryString = [
+        'kind'    => ['except' => 'product'],
+        'search'  => ['except' => ''],
+        'active'  => ['except' => ''],
+        'perPage' => ['except' => 15],
+        'page'    => ['except' => 1],
+    ];
+
+    // Single hook to reset page when filters change
+    public function updating($name, $value): void
+    {
+        if (in_array($name, ['kind','search','active','perPage'], true)) {
+            $this->resetPage();
+        }
+    }
 
     public function openCreate(string $kind = 'product'): void
     {
@@ -72,17 +86,28 @@ class Index extends Component
 
     public function render(VendorCategoryService $svc)
     {
-        $rows   = $svc->paginate([
-            'kind'   => $this->kind,
-            'search' => $this->search,
-            'active' => $this->active,
-        ], $this->perPage);
+        $q = $svc->query($this->kind)
+            // Search by name/slug
+            ->when($this->search !== '', function (Builder $b) {
+                $s = '%'. $this->search .'%';
+                $b->where(function (Builder $q) use ($s) {
+                    $q->where('name', 'like', $s)
+                      ->orWhere('slug', 'like', $s);
+                });
+            })
+            // Active filter
+            ->when($this->active !== '', function (Builder $b) {
+                $b->where('is_active', $this->active === '1' ? 1 : 0);
+            })
+            ->orderBy('display_order', 'asc')
+            ->orderBy('name', 'asc');
 
+        $rows   = $q->paginate($this->perPage)->withQueryString();
         $counts = $svc->counts();
 
         return view('livewire.admin.vendor-categories.index', compact('rows','counts'))
             ->layout('layouts.admin', [
-                'title' => 'Vendor Categories • '.ucfirst($this->kind).' | '.config('app.name')
+                'title' => 'Vendor Categories • '.ucfirst($this->kind).' | '.config('app.name'),
             ]);
     }
 }

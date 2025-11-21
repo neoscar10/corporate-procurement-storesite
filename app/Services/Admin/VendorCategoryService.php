@@ -6,17 +6,23 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use App\Models\Vendor\VendorCategory;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class VendorCategoryService
 {
+     public function query(string $kind = 'product'): Builder
+    {
+        $kind = in_array($kind, ['product','service'], true) ? $kind : 'product';
+
+        return VendorCategory::query()
+            ->where('kind', $kind);
+    }
+
     public function paginate(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $q = VendorCategory::query();
-
-        // Filter by kind (default: product)
-        $kind = $filters['kind'] ?? 'product';
-        $q->where('kind', in_array($kind, ['product','service'], true) ? $kind : 'product');
+       
+        $q = $this->query($filters['kind'] ?? 'product');
 
         // Search by name/slug
         if (!empty($filters['search'])) {

@@ -15,54 +15,55 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-5">
                     <label class="form-label mb-0 small text-muted">Search</label>
-                    <input type="text" class="form-control" placeholder="Name, email, phone, company…"
-                        wire:model.debounce.400ms="search">
+                    <input type="text" class="form-control" placeholder="Name, email, phone, company or category…"
+                        wire:model.live.debounce.400ms="search">
                 </div>
-
+    
                 <div class="col-md-2">
                     <label class="form-label mb-0 small text-muted">Active</label>
-                    <select class="form-select" wire:model="active">
+                    <select class="form-select" wire:model.live="active">
                         <option value="">All</option>
                         <option value="1">Active</option>
                         <option value="0">Inactive</option>
                     </select>
                 </div>
-
+    
                 <div class="col-md-3">
                     <label class="form-label mb-0 small text-muted">Provides</label>
-                    <select class="form-select" wire:model="provides">
+                    <select class="form-select" wire:model.live="provides">
                         <option value="">Products & Services</option>
                         <option value="products">Products only</option>
                         <option value="services">Services only</option>
                     </select>
                 </div>
-
+    
                 <div class="col-md-2">
                     <label class="form-label mb-0 small text-muted">Per page</label>
-                    <select class="form-select" wire:model="perPage">
-                        <option>10</option>
-                        <option selected>15</option>
-                        <option>25</option>
-                        <option>50</option>
+                    <select class="form-select" wire:model.live="perPage">
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
+
     {{-- Table --}}
     <div class="card">
-        <div class="card-body table-responsive">
+        <div class="card-body ">
             <table class="table table-bordered table-nowrap align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Vendor</th>
                         <th>Email</th>
-                        <th>Company</th>
+                        {{-- <th>Company</th> --}}
                         <th>Provides</th>
                         <th>Categories</th>
                         <th>Status</th>
-                        <th>Updated</th>
+                        {{-- <th>Updated</th> --}}
                         <th class="text-end"></th>
                     </tr>
                 </thead>
@@ -78,8 +79,8 @@
                         @endphp
                         <tr wire:key="vendor-{{ $r->id }}">
                             <td class="fw-semibold">{{ $r->name ?? '—' }}</td>
-                            <td class="text-muted">{{ $r->email ?? '—' }}</td>
-                            <td class="text-muted">{{ $r->company_name ?? '—' }}</td>
+                            <td class="">{{ $r->email ?? '—' }}</td>
+                            {{-- <td class="text-muted">{{ $r->company_name ?? '—' }}</td> --}}
                             <td>
                                 @if($r->provides_products)
                                     <span class="badge bg-primary-subtle text-primary me-1">Products</span>
@@ -91,18 +92,14 @@
                                     <span class="badge bg-light text-muted">—</span>
                                 @endif
                             </td>
-                            <td class="text-muted">
-                                @if($r->categories->count())
-                                    @foreach($r->categories->take(3) as $c)
-                                        <span class="badge bg-light text-dark me-1">{{ $c->name }}</span>
-                                    @endforeach
-                                    @if($r->categories->count() > 3)
-                                        <span class="badge bg-light text-muted">+{{ $r->categories->count() - 3 }}</span>
-                                    @endif
-                                @else
-                                    —
-                                @endif
+                            <td class="">
+                                @php
+                                    $catNames = $r->categories->pluck('name')->implode(', ');
+                                @endphp
+
+                                {{ $catNames !== '' ? $catNames : '—' }}
                             </td>
+
                             <td>
                                 @if($r->is_active)
                                     <span class="badge bg-success-subtle text-success">Active</span>
@@ -110,9 +107,9 @@
                                     <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
                                 @endif
                             </td>
-                            <td class="text-muted">
+                            {{-- <td class="text-muted">
                                 {{ optional($r->updated_at)->timezone($tz)->format('j M Y, g:i a') }}
-                            </td>
+                            </td> --}}
                             <td class="text-end">
                                 <div class="dropdown">
                                     <a href="#" data-bs-toggle="dropdown" aria-expanded="false">

@@ -5,9 +5,21 @@ namespace App\Services\Admin;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use App\Models\Procurement\{ProcurementRequest, ProcurementItem};
 use App\Enums\Procurement\RequestStatus;
+use Illuminate\Database\Eloquent\Builder;
+
 
 class ProcurementService
 {
+    public function queryRequests(): Builder
+    {
+        return ProcurementRequest::query()
+            ->withCount('items')
+            ->with([
+                'company:id,brand_name,legal_name',
+                'creator:id,name',
+            ]);
+    }
+
     /**
      * Super Admin list: only published, newest first.
      */

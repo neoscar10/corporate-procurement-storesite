@@ -10,38 +10,59 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\Vendor\WelcomeVendorMail;
+use Illuminate\Database\Eloquent\Builder;
 
 class VendorService
 {
-    public function paginate(array $filters, int $perPage = 15): LengthAwarePaginator
+      // base query that Livewire can build on
+    public function query(): Builder
     {
-        $q = Vendor::query()
-            ->with(['categories:id,name,kind'])
-            ->with('user:id,is_vendor');
-
-        if (!empty($filters['search'])) {
-            $s = '%'.trim($filters['search']).'%';
-            $q->where(function($qq) use ($s) {
-                $qq->where('name','like',$s)
-                   ->orWhere('email','like',$s)
-                   ->orWhere('phone','like',$s)
-                   ->orWhere('company_name','like',$s);
-            });
-        }
-
-        if (isset($filters['active']) && $filters['active'] !== '') {
-            $q->where('is_active', $filters['active'] === '1');
-        }
-
-        if (($filters['provides'] ?? '') === 'products') {
-            $q->where('provides_products', true);
-        } elseif (($filters['provides'] ?? '') === 'services') {
-            $q->where('provides_services', true);
-        }
-
-        $q->orderByDesc('id');
-        return $q->paginate($perPage);
+        return Vendor::query()
+            ->with(['categories:id,name,kind', 'user:id,is_vendor']);
     }
+
+   public function paginate(array $filters, int $perPage = 15): LengthAwarePaginator
+{
+    $search   = isset($filters['search']) ? trim($filters['search']) : '';
+    $active   = $filters['active']   ?? '';
+    $provides = $filters['provides'] ?? '';
+
+    $query = Vendor::query()
+        ->with(['categories:id,name,kind', 'user:id,is_vendor']);
+
+    // --- Search by vendor fields + category names ---
+    if ($search !== '') {
+        $like = '%'.$search.'%';
+
+        $query->where(function ($q) use ($like) {
+            $q->where('name', 'like', $like)
+              ->orWhere('email', 'like', $like)
+              ->orWhere('phone', 'like', $like)
+              ->orWhere('company_name', 'like', $like)
+              ->orWhereHas('categories', function ($q2) use ($like) {
+                  $q2->where('name', 'like', $like);
+              });
+        });
+    }
+
+    // --- Active filter: '' | '1' | '0' ---
+    if ($active !== '') {
+        $query->where('is_active', $active === '1' ? 1 : 0);
+    }
+
+    // --- Provides filter: '' | 'products' | 'services' ---
+    if ($provides === 'products') {
+        $query->where('provides_products', 1);
+    } elseif ($provides === 'services') {
+        $query->where('provides_services', 1);
+    }
+
+    return $query
+        ->orderByDesc('id')
+        ->paginate($perPage);
+}
+
+
 
     public function categoryOptions(): array
     {

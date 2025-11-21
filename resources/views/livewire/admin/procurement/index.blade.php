@@ -6,42 +6,43 @@
             <span class="badge bg-light text-dark">Total: {{ $rows->total() }}</span>
         </x-slot:actions>
     </x-ui.page-header>
+{{-- filters --}}
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label mb-0 small text-muted">Search</label>
+                <input type="text" class="form-control" placeholder="Search by PR #, title or company..."
+                    wire:model.live.debounce.400ms="search">
+            </div>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label mb-0 small text-muted">Search</label>
-                    <input type="text" class="form-control" placeholder="Search by PR # or title..."
-                        wire:model.debounce.400ms="search">
-                </div>
+            <div class="col-md-3">
+                <label class="form-label mb-0 small text-muted">Status</label>
+                <select class="form-select" wire:model.live="status">
+                    <option value="">All</option>
+                    <option value="published">Published</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending_approval">Pending Approval</option>
+                    <option value="draft">Draft</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="canceled">Canceled</option>
+                </select>
+            </div>
 
-                <div class="col-md-3">
-                    <label class="form-label mb-0 small text-muted">Status</label>
-                    <select class="form-select" wire:model="status">
-                        <option value="">All</option>
-                        <option value="published">Published</option>
-                        <option value="approved">Approved</option>
-                        <option value="pending_approval">Pending Approval</option>
-                        <option value="draft">Draft</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="canceled">Canceled</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2 ms-auto">
-                    <label class="form-label mb-0 small text-muted">Per page</label>
-                    <select class="form-select" wire:model="perPage">
-                        <option value="10">10</option>
-                        <option value="15">15</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
+            <div class="col-md-2 ms-auto">
+                <label class="form-label mb-0 small text-muted">Per page</label>
+                <select class="form-select" wire:model.live="perPage">
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
             </div>
         </div>
     </div>
+</div>
+
 
     <div class="card">
         <div class="card-body table-responsive">
@@ -62,16 +63,16 @@
                 <tbody>
                     @forelse ($rows as $r)
                                                                 @php
-                        $statusRaw = $r->status instanceof \BackedEnum ? strtolower($r->status->value) : strtolower((string) $r->status);
-                        $statusCls = match ($statusRaw) {
-                            'published' => 'badge bg-success-subtle text-success',
-                            'approved' => 'badge bg-primary-subtle text-primary',
-                            'pending', 'pending_approval' => 'badge bg-info-subtle text-info',
-                            'draft' => 'badge bg-secondary-subtle text-secondary',
-                            'rejected' => 'badge bg-danger-subtle text-danger',
-                            'cancelled', 'canceled' => 'badge bg-dark-subtle text-dark',
-                            default => 'badge bg-secondary-subtle text-secondary',
-                        };
+    $statusRaw = $r->status instanceof \BackedEnum ? strtolower($r->status->value) : strtolower((string) $r->status);
+    $statusCls = match ($statusRaw) {
+        'published' => 'badge bg-success-subtle text-success',
+        'approved' => 'badge bg-primary-subtle text-primary',
+        'pending', 'pending_approval' => 'badge bg-info-subtle text-info',
+        'draft' => 'badge bg-secondary-subtle text-secondary',
+        'rejected' => 'badge bg-danger-subtle text-danger',
+        'cancelled', 'canceled' => 'badge bg-dark-subtle text-dark',
+        default => 'badge bg-secondary-subtle text-secondary',
+    };
                         @endphp
                         <tr wire:key="sa-pr-{{ $r->id }}">
                             <th scope="row">PR-#{{ $r->id }}</th>

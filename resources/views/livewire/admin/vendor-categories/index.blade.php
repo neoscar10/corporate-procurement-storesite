@@ -39,38 +39,39 @@
                 <div class="col-md-5">
                     <label class="form-label mb-0 small text-muted">Search</label>
                     <input type="text" class="form-control" placeholder="Name or slug…"
-                        wire:model.debounce.400ms="search">
+                        wire:model.live.debounce.400ms="search">
                 </div>
-
+    
                 <div class="col-md-2">
                     <label class="form-label mb-0 small text-muted">Active</label>
-                    <select class="form-select" wire:model="active">
+                    <select class="form-select" wire:model.live="active">
                         <option value="">All</option>
                         <option value="1">Active</option>
                         <option value="0">Inactive</option>
                     </select>
                 </div>
-
+    
                 <div class="col-md-2 ms-auto">
                     <label class="form-label mb-0 small text-muted">Per page</label>
-                    <select class="form-select" wire:model="perPage">
-                        <option>10</option>
-                        <option selected>15</option>
-                        <option>25</option>
-                        <option>50</option>
+                    <select class="form-select" wire:model.live="perPage">
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
+
     {{-- Table --}}
     <div class="card">
-        <div class="card-body table-responsive">
+        <div class="card-body">
             <table class="table table-bordered table-nowrap align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:70px;">Order</th>
+                        {{-- <th style="width:70px;">Order</th> --}}
                         <th>Name</th>
                         <th>Slug</th>
                         <th style="width:110px;">Status</th>
@@ -81,7 +82,7 @@
                 <tbody>
                     @forelse($rows as $r)
                         <tr wire:key="vc-{{ $r->id }}">
-                            <td>
+                            {{-- <td>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <button class="btn btn-light material-shadow-none" wire:click="move({{ $r->id }}, 'up')"
                                         title="Move up">
@@ -93,7 +94,7 @@
                                     </button>
                                 </div>
                                 <span class="badge bg-light text-muted ms-1">{{ (int) $r->display_order }}</span>
-                            </td>
+                            </td> --}}
                             <td class="fw-semibold">{{ $r->name }}</td>
                             <td class="text-muted">{{ $r->slug }}</td>
                             <td>
@@ -152,7 +153,7 @@
 
     {{-- Delete Confirm (JS-controlled, uses $deleteId in the parent) --}}
     <div class="modal fade" id="vcDelete" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-dialog modal-dialog-centered modal-md" style="--bs-modal-width: 720px;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title mb-0">Delete Category</h5>
