@@ -40,11 +40,11 @@
             @error('is_active')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
         </div>
 
-        <div class="col-12">
+        {{-- <div class="col-12">
             <label class="form-label">Description</label>
             <textarea class="form-control" rows="3" wire:model.defer="description" placeholder="Optional"></textarea>
             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-        </div>
+        </div> --}}
     </div>
 
     <x-slot:footer>
