@@ -3,16 +3,20 @@
     {{-- LOGO --}}
     <div class="navbar-brand-box">
         <a href="{{ url('/') }}" class="logo logo-dark">
-            <span class="logo-sm"><img src="{{ asset('velzon/assets/images/logo-sm.png') }}" alt="Logo"
-                    height="22"></span>
-            <span class="logo-lg"><img src="{{ asset('velzon/assets/images/logo-dark.png') }}" alt="Logo"
-                    height="17"></span>
+            <span class="logo-sm">
+                <img src="{{ asset('velzon/assets/images/logo-sm.png') }}" alt="Logo" height="22">
+            </span>
+            <span class="logo-lg">
+                <img src="{{ asset('velzon/assets/images/logo-dark.png') }}" alt="Logo" height="17">
+            </span>
         </a>
         <a href="{{ url('/') }}" class="logo logo-light">
-            <span class="logo-sm"><img src="{{ asset('velzon/assets/images/logo-sm.png') }}" alt="Logo"
-                    height="22"></span>
-            <span class="logo-lg"><img src="{{ asset('velzon/assets/images/logo-light.png') }}" alt="Logo"
-                    height="17"></span>
+            <span class="logo-sm">
+                <img src="{{ asset('velzon/assets/images/logo-sm.png') }}" alt="Logo" height="22">
+            </span>
+            <span class="logo-lg">
+                <img src="{{ asset('velzon/assets/images/logo-light.png') }}" alt="Logo" height="17">
+            </span>
         </a>
         <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"
             id="vertical-hover">
@@ -25,48 +29,77 @@
             <div id="two-column-menu"></div>
 
             @php
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-use App\Models\Company\CompanyMember;
+                use Illuminate\Support\Facades\Auth;
+                use Illuminate\Support\Facades\Route;
+                use App\Models\Company\CompanyMember;
 
-$user = Auth::user();
-$isAdmin = $user && (int) ($user->is_admin ?? 0) === 1;
+                $user = Auth::user();
+                $isAdmin = $user && (int) ($user->is_admin ?? 0) === 1;
 
-// Latest active membership (if any)
-$membership = $user
-    ? CompanyMember::with('company')->where('user_id', $user->id)->where('is_active', true)->latest('id')->first()
-    : null;
+                // Latest active membership (if any)
+                $membership = $user
+                    ? CompanyMember::with('company')
+                        ->where('user_id', $user->id)
+                        ->where('is_active', true)
+                        ->latest('id')
+                        ->first()
+                    : null;
 
-$company = optional($membership)->company;
-$companyStatus = $company->status ?? null;
-$showOnboarding = $companyStatus === 'pending';
+                $company = optional($membership)->company;
+                $companyStatus = $company->status ?? null;
+                $showOnboarding = $companyStatus === 'pending';
 
-// Route helpers + active states
-$active = fn(string $pattern) => request()->routeIs($pattern) ? 'active' : '';
+                // Route helpers + active states
+                $active = fn(string $pattern) => request()->routeIs($pattern) ? 'active' : '';
 
-$adminDashboardHref = Route::has('admin.dashboard') ? route('admin.dashboard') : '#';
-$adminRequestsHref = Route::has('admin.company.requests.index') ? route('admin.company.requests.index') : '#';
-$companyOnboardingHref = Route::has('company.onboarding') ? route('company.onboarding') : '#';
-$companyAdminDashHref = Route::has('company.admin.dashboard') ? route('company.admin.dashboard') : '#';
-$companyUserDashHref = Route::has('company.user.dashboard') ? route('company.user.dashboard') : '#';
+                $adminDashboardHref = Route::has('admin.dashboard') ? route('admin.dashboard') : '#';
+                $adminRequestsHref = Route::has('admin.company.requests.index') ? route('admin.company.requests.index') : '#';
+                $companyOnboardingHref = Route::has('company.onboarding') ? route('company.onboarding') : '#';
+                $companyAdminDashHref = Route::has('company.admin.dashboard') ? route('company.admin.dashboard') : '#';
+                $companyUserDashHref = Route::has('company.user.dashboard') ? route('company.user.dashboard') : '#';
 
-// Company procurements route (handles earlier typo)
-$companyProcHref = Route::has('comapany.procurements')
-    ? route('comapany.procurements')
-    : (Route::has('company.procurements') ? route('company.procurements') : '#');
+                // Company procurements route (handles earlier typo)
+                $companyProcHref = Route::has('comapany.procurements')
+                    ? route('comapany.procurements')
+                    : (Route::has('company.procurements') ? route('company.procurements') : '#');
 
-// Super Admin • Published Requests
-$saPublishedHref = Route::has('superadmin.procure.requests.index')
-    ? route('superadmin.procure.requests.index')
-    : '#';
-$vendorCatsHref = Route::has('admin.vendor.categories.index')
-    ? route('admin.vendor.categories.index')
-    : (Route::has('admin.vendor.categories')
-        ? route('admin.vendor.categories')
-        : (Route::has('superadmin.vendor.categories.index')
-            ? route('superadmin.vendor.categories.index')
-            : '#'));
-$adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.index') : '#';
+                // Super Admin • Published Requests
+                $saPublishedHref = Route::has('superadmin.procure.requests.index')
+                    ? route('superadmin.procure.requests.index')
+                    : '#';
+
+                $vendorCatsHref = Route::has('admin.vendor.categories.index')
+                    ? route('admin.vendor.categories.index')
+                    : (Route::has('admin.vendor.categories')
+                        ? route('admin.vendor.categories')
+                        : (Route::has('superadmin.vendor.categories.index')
+                            ? route('superadmin.vendor.categories.index')
+                            : '#'));
+
+                $adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.index') : '#';
+
+                // Company Users route (new)
+                $companyUsersHref = ($company && Route::has('company.users.index'))
+                    ? route('company.users.index', $company->id)
+                    : '#';
+
+                // Permission to see "Company users" menu item
+                $canManageUsersNav = false;
+                if ($membership && $company) {
+                    // CompanyAdmin via pivot label or legacy role
+                    $roleLabel = $membership->role_label ?? null;
+                    if (
+                        $membership->is_active &&
+                        ($roleLabel === 'CompanyAdmin' || $membership->role === 'company_admin')
+                    ) {
+                        $canManageUsersNav = true;
+                    }
+
+                    // Fallbacks: direct permission or platform super-admin
+                    if (!$canManageUsersNav && $user && method_exists($user, 'hasPermission')) {
+                        $canManageUsersNav = $user->hasPermission('manage_users') || (bool) $user->is_admin;
+                    }
+                }
             @endphp
 
             <ul class="navbar-nav" id="navbar-nav">
@@ -91,6 +124,16 @@ $adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.ind
                         </a>
                     </li>
 
+                    {{-- Company Users (only for CompanyAdmin / manage_users / platform admin) --}}
+                    @if($canManageUsersNav)
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ $active('company.users.*') }}" href="{{ $companyUsersHref }}">
+                                <i class="mdi mdi-account-group-outline"></i>
+                                <span>Company users</span>
+                            </a>
+                        </li>
+                    @endif
+
                     @if($showOnboarding)
                         <li class="nav-item">
                             <a class="nav-link menu-link {{ $active('company.onboarding') }}"
@@ -113,7 +156,6 @@ $adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.ind
                         </a>
                     </li>
 
-
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $active('admin.company.requests.*') }}"
                             href="{{ $adminRequestsHref }}">
@@ -122,7 +164,7 @@ $adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.ind
                         </a>
                     </li>
 
-                    {{-- NEW: Published Procurement Requests (Super Admin) --}}
+                    {{-- Published Procurement Requests (Super Admin) --}}
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $active('superadmin.procure.requests.*') }}"
                             href="{{ $saPublishedHref }}">
@@ -133,22 +175,20 @@ $adminVendorsHref = Route::has('admin.vendors.index') ? route('admin.vendors.ind
 
                     <li class="nav-item">
                         <a class="nav-link menu-link
-                                   {{ $active('admin.vendor.categories') }}
-                                   {{ $active('admin.vendor.categories.*') }}
-                                   {{ $active('superadmin.vendor.categories.*') }}" href="{{ $vendorCatsHref }}">
+                                       {{ $active('admin.vendor.categories') }}
+                                       {{ $active('admin.vendor.categories.*') }}
+                                       {{ $active('superadmin.vendor.categories.*') }}" href="{{ $vendorCatsHref }}">
                             <i class="mdi mdi-tag-multiple-outline"></i>
                             <span>Vendor Categories</span>
                         </a>
                     </li>
 
-                    {{-- // under Admin section: --}}
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $active('admin.vendors.index') }}" href="{{ $adminVendorsHref }}">
                             <i class="mdi mdi-account-multiple-outline"></i>
                             <span>Vendors</span>
                         </a>
                     </li>
-
                 @endif
             </ul>
         </div>

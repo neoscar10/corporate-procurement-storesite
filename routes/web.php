@@ -22,6 +22,7 @@ use App\Livewire\Admin\Procurement\Index as SaProcureIndex;
 use App\Livewire\Admin\Procurement\ItemShow as AdminItemShow;
 use App\Livewire\Admin\VendorCategories\Index as VendorCategoriesIndex;
 use App\Livewire\Admin\Vendors\Index as VendorsIndex;
+use App\Livewire\Company\Users\Index as CompanyUsersIndex;
 
 
 
@@ -57,7 +58,10 @@ Route::post('/logout', function (WebAuthService $auth) {
 
     Route::get('company/procure/requests/{request}/items/{item}', ItemShow::class)
             ->name('company.procure.requests.items.show');
-});
+
+    Route::get('company/{company}/users', CompanyUsersIndex::class)
+            ->name('company.users.index');
+    });
 
 
 // Super admon routes, no middleware yet
